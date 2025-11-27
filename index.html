@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Αναφορά (αριστερά) + Σημειώσεις (δεξιά)</title>
+  <style>
+    :root{
+      --bg:#0b0f1a;
+      --panel:#0f172a;
+      --ink:#e6eaff;
+      --muted:#aab4d6;
+      --line:rgba(255,255,255,.10);
+      --btn:#1f2a44;
+      --btn2:#253257;
+      --accent:#7c5cff;
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 800px at 20% 10%, rgba(124,92,255,.25), transparent 55%),
+                  radial-gradient(1000px 700px at 90% 40%, rgba(0,200,255,.12), transparent 60%),
+                  var(--bg);
+      color:var(--ink);
+      height:100vh;
+      overflow:hidden;
+    }
+    header{
+      height:56px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:10px 14px;
+      border-bottom:1px solid var(--line);
+      backdrop-filter: blur(8px);
+      background: rgba(10,14,26,.60);
+    }
+    .brand{
+      display:flex; gap:10px; align-items:center;
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+    .dot{
+      width:10px;height:10px;border-radius:999px;background:var(--accent);
+      box-shadow: 0 0 0 6px rgba(124,92,255,.15);
+    }
+    .top-actions{
+      display:flex; gap:8px; align-items:center;
+    }
+    button{
+      border:1px solid var(--line);
+      background: linear-gradient(180deg, var(--btn), rgba(31,42,68,.75));
+      color:var(--ink);
+      border-radius:12px;
+      padding:9px 12px;
+      cursor:pointer;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      transition: transform .05s ease, background .15s ease, border-color .15s ease;
+      font-weight:600;
+    }
+    button:hover{ background: linear-gradient(180deg, var(--btn2), rgba(37,50,87,.75)); border-color: rgba(255,255,255,.18); }
+    button:active{ transform: translateY(1px); }
+    button.secondary{
+      background: rgba(255,255,255,.06);
+      box-shadow:none;
+    }
+    .wrap{
+      height: calc(100vh - 56px);
+      display:grid;
+      grid-template-columns: 1fr 10px 1fr;
+    }
+    .pane{
+      height:100%;
+      overflow:hidden;
+      position:relative;
+      padding:12px;
+    }
+    .card{
+      height:100%;
+      background: rgba(15,23,42,.72);
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+    .card-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+      background: rgba(0,0,0,.10);
+    }
+    .title{
+      display:flex; flex-direction:column;
+      gap:2px;
+    }
+    .title b{font-size:13px}
+    .title span{font-size:12px;color:var(--muted)}
+    .head-actions{
+      display:flex; gap:8px; align-items:center;
+    }
+    .ref-input{
+      width:min(520px, 52vw);
+      padding:9px 10px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      color:var(--ink);
+      outline:none;
+    }
+    .ref-input::placeholder{color:rgba(230,234,255,.45)}
+    iframe{
+      width:100%;
+      height:100%;
+      border:0;
+      background: #0a0e1a;
+    }
+    .iframe-wrap{
+      flex:1;
+      position:relative;
+      overflow:hidden;
+    }
+    .iframe-banner{
+      position:absolute;
+      inset:auto 12px 12px 12px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background: rgba(10,14,26,.75);
+      backdrop-filter: blur(10px);
+    }
+    .iframe-banner .msg{
+      font-size:12px; color:var(--muted); line-height:1.2;
+    }
+
+    /* Splitter */
+    .splitter{
+      cursor: col-resize;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border-left:1px solid rgba(255,255,255,.05);
+      border-right:1px solid rgba(255,255,255,.05);
+    }
+
+    /* Editor */
+    .toolbar{
+      display:flex; flex-wrap:wrap;
+      gap:8px;
+    }
+    .tool{
+      padding:7px 10px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color:var(--ink);
+      cursor:pointer;
+      font-weight:700;
+      font-size:13px;
+    }
+    .tool:hover{border-color: rgba(255,255,255,.18)}
+    .editor{
+      flex:1;
+      padding:14px;
+      overflow:auto;
+      outline:none;
+      line-height:1.55;
+      font-size:15px;
+    }
+    .editor:empty::before{
+      content:"Γράψε εδώ τις σημειώσεις σου… (autosave ενεργό)";
+      color: rgba(230,234,255,.35);
+    }
+    .status{
+      padding:10px 12px;
+      border-top:1px solid var(--line);
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      background: rgba(0,0,0,.08);
+    }
+    a.link{
+      color: var(--ink);
+      text-decoration: none;
+      border-bottom: 1px dashed rgba(230,234,255,.35);
+    }
+    a.link:hover{border-bottom-color: rgba(230,234,255,.7)}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="dot"></span> Αναφορά ↔ Σημειώσεις</div>
+    <div class="top-actions">
+      <button class="secondary" id="clearNotesBtn" title="Καθαρισμός σημειώσεων (μόνο δεξιά)">Clear notes</button>
+      <button id="exportBtn" title="Κατέβασε τις σημειώσεις ως .html">Export</button>
+    </div>
+  </header>
+
+  <div class="wrap" id="wrap">
+    <!-- LEFT: reference -->
+    <section class="pane" id="leftPane">
+      <div class="card">
+        <div class="card-head">
+          <div class="title">
+            <b>Αναφορά</b>
+            <span>Αριστερά είναι μόνο “βλέπω”. Δεν μπορούμε να διαβάσουμε/πιάσουμε το περιεχόμενο μέσω JS (άλλο domain).</span>
+          </div>
+          <div class="head-actions">
+            <input class="ref-input" id="refUrl" placeholder="URL αναφοράς…" />
+            <button id="loadRefBtn">Load</button>
+            <button class="secondary" id="openNewTabBtn">New tab</button>
+          </div>
+        </div>
+        <div class="iframe-wrap">
+          <iframe id="refFrame" title="Reference"></iframe>
+
+          <div class="iframe-banner">
+            <div class="msg">
+              Αν η σελίδα δεν εμφανίζεται, πιθανότατα μπλοκάρει iframe. Τότε άνοιξέ την σε νέα καρτέλα ή φόρτωσε τοπικό αντίγραφο (Ctrl+S → Webpage, Complete).
+            </div>
+            <button id="openNewTabBtn2">Άνοιγμα σε νέα καρτέλα</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SPLITTER -->
+    <div class="splitter" id="splitter" aria-label="splitter"></div>
+
+    <!-- RIGHT: notes -->
+    <section class="pane" id="rightPane">
+      <div class="card">
+        <div class="card-head">
+          <div class="title">
+            <b>Σημειώσεις</b>
+            <span>Autosave + basic formatting. Ναι, είναι λίγο oldschool το execCommand, αλλά κάνει τη δουλειά.</span>
+          </div>
+          <div class="toolbar" role="toolbar" aria-label="editor tools">
+            <button class="tool" data-cmd="bold"><b>B</b></button>
+            <button class="tool" data-cmd="italic"><i>I</i></button>
+            <button class="tool" data-cmd="underline"><u>U</u></button>
+            <button class="tool" data-cmd="insertUnorderedList">• List</button>
+            <button class="tool" data-cmd="formatBlock" data-arg="h2">H2</button>
+            <button class="tool" data-cmd="formatBlock" data-arg="blockquote">Quote</button>
+            <button class="tool" data-cmd="removeFormat">Clear fmt</button>
+          </div>
+        </div>
+
+        <div id="editor" class="editor" contenteditable="true" spellcheck="true"></div>
+
+        <div class="status">
+          <span id="saveState">—</span>
+          <span>Tip: Κράτα και δικό σου backup: <a class="link" href="#" id="quickExport">Export τώρα</a></span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const DEFAULT_URL = "https://users.sch.gr/kassetas/yPhysicsALyceum7.htm";
+    const LS_KEY_NOTES = "split_ref_notes_v1";
+    const LS_KEY_URL   = "split_ref_url_v1";
+
+    const wrap = document.getElementById("wrap");
+    const splitter = document.getElementById("splitter");
+    const leftPane = document.getElementById("leftPane");
+    const rightPane = document.getElementById("rightPane");
+
+    const refUrl = document.getElementById("refUrl");
+    const refFrame = document.getElementById("refFrame");
+    const loadRefBtn = document.getElementById("loadRefBtn");
+    const openNewTabBtn = document.getElementById("openNewTabBtn");
+    const openNewTabBtn2 = document.getElementById("openNewTabBtn2");
+
+    const editor = document.getElementById("editor");
+    const saveState = document.getElementById("saveState");
+    const exportBtn = document.getElementById("exportBtn");
+    const quickExport = document.getElementById("quickExport");
+    const clearNotesBtn = document.getElementById("clearNotesBtn");
+
+    // ---- Reference loading
+    function normalizeUrl(u){
+      if(!u) return "";
+      u = u.trim();
+      if(!u) return "";
+      // allow local files (file://) and http(s)
+      if(u.startsWith("file://") || u.startsWith("http://") || u.startsWith("https://")) return u;
+      // user typed without scheme
+      return "https://" + u;
+    }
+
+    function loadReference(u){
+      const url = normalizeUrl(u);
+      if(!url) return;
+      refFrame.src = url;
+      localStorage.setItem(LS_KEY_URL, url);
+      refUrl.value = url;
+    }
+
+    loadRefBtn.addEventListener("click", () => loadReference(refUrl.value));
+    refUrl.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") loadReference(refUrl.value);
+    });
+
+    function openInNewTab(){
+      const url = normalizeUrl(refUrl.value);
+      if(url) window.open(url, "_blank", "noopener,noreferrer");
+    }
+    openNewTabBtn.addEventListener("click", openInNewTab);
+    openNewTabBtn2.addEventListener("click", openInNewTab);
+
+    // ---- Editor formatting
+    document.querySelectorAll(".tool").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const cmd = btn.getAttribute("data-cmd");
+        const arg = btn.getAttribute("data-arg");
+        editor.focus();
+        if(cmd === "formatBlock") {
+          document.execCommand(cmd, false, arg);
+        } else {
+          document.execCommand(cmd, false, null);
+        }
+        scheduleSave();
+      });
+    });
+
+    // ---- Autosave
+    let saveTimer = null;
+    function scheduleSave(){
+      if(saveTimer) clearTimeout(saveTimer);
+      saveState.textContent = "γράφεις…";
+      saveTimer = setTimeout(() => {
+        localStorage.setItem(LS_KEY_NOTES, editor.innerHTML);
+        const t = new Date();
+        saveState.textContent = "saved " + t.toLocaleTimeString("el-GR", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+      }, 350);
+    }
+    editor.addEventListener("input", scheduleSave);
+
+    // ---- Export
+    function exportNotes(){
+      const html = `<!doctype html>
+<html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Σημειώσεις</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;line-height:1.6}
+  blockquote{border-left:4px solid #bbb;padding-left:12px;color:#444}
+</style>
+</head><body>
+${editor.innerHTML || "<p>(κενό)</p>"}
+</body></html>`;
+      const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+      const a = document.createElement("a");
+      const ts = new Date().toISOString().slice(0,19).replaceAll(":","-");
+      a.href = URL.createObjectURL(blob);
+      a.download = `notes_${ts}.html`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+    exportBtn.addEventListener("click", exportNotes);
+    quickExport.addEventListener("click", (e) => { e.preventDefault(); exportNotes(); });
+
+    clearNotesBtn.addEventListener("click", () => {
+      editor.innerHTML = "";
+      localStorage.removeItem(LS_KEY_NOTES);
+      saveState.textContent = "cleared";
+      editor.focus();
+    });
+
+    // ---- Splitter drag
+    let dragging = false;
+    splitter.addEventListener("mousedown", () => { dragging = true; document.body.style.userSelect = "none"; });
+    window.addEventListener("mouseup", () => { dragging = false; document.body.style.userSelect = ""; });
+    window.addEventListener("mousemove", (e) => {
+      if(!dragging) return;
+      const rect = wrap.getBoundingClientRect();
+      const x = Math.max(220, Math.min(e.clientX - rect.left, rect.width - 220));
+      // 3 cols: left | splitter(10px) | right
+      wrap.style.gridTemplateColumns = `${x}px 10px 1fr`;
+    });
+
+    // ---- Restore on load
+    (function init(){
+      const savedUrl = localStorage.getItem(LS_KEY_URL) || DEFAULT_URL;
+      refUrl.value = savedUrl;
+      loadReference(savedUrl);
+
+      const savedNotes = localStorage.getItem(LS_KEY_NOTES);
+      if(savedNotes) editor.innerHTML = savedNotes;
+      saveState.textContent = savedNotes ? "restored" : "—";
+    })();
+  </script>
+</body>
+</html>
