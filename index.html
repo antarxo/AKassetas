@@ -3,309 +3,341 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Reference + Notes (νοηματικό sync)</title>
+  <title>Αναφορά + Σημειώσεις (Synced)</title>
   <style>
-    :root{ --bg:#0b1220; --panel:#0f1b31; --line:rgba(255,255,255,.12); --txt:#eaf1ff; --muted:rgba(234,241,255,.65); }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe UI,Arial}
+    :root{
+      --bg:#0b1220;
+      --panel:#0f1b33;
+      --panel2:#0c172d;
+      --line:rgba(255,255,255,.12);
+      --text:#e9efff;
+      --muted:rgba(233,239,255,.7);
+      --accent:#77a6ff;
+    }
+
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:linear-gradient(180deg,#0a1020,#050913);
+      color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      overflow:hidden;
+    }
+
     .topbar{
-      position:sticky;top:0;z-index:10;
-      display:flex;gap:10px;align-items:center;justify-content:space-between;
-      padding:10px 12px;background:linear-gradient(180deg, rgba(15,27,49,.96), rgba(15,27,49,.70));
-      border-bottom:1px solid var(--line); backdrop-filter: blur(8px);
+      height:48px;
+      display:flex;
+      align-items:center;
+      gap:14px;
+      padding:0 14px;
+      background:rgba(10,16,32,.7);
+      border-bottom:1px solid var(--line);
+      backdrop-filter: blur(10px);
+      font-size:14px;
+      color:var(--muted);
     }
-    .topbar .left{display:flex;gap:10px;align-items:center}
-    .chip{padding:6px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px}
-    button{
-      border:1px solid var(--line); background:rgba(255,255,255,.06); color:var(--txt);
-      border-radius:12px; padding:8px 10px; cursor:pointer;
+    .pill{
+      padding:6px 10px;
+      border:1px solid var(--line);
+      border-radius:100px;
+      background:rgba(255,255,255,.04);
+      color:var(--muted);
     }
-    button:hover{background:rgba(255,255,255,.10)}
+    .pill b{color:var(--text)}
     .wrap{
-      height:calc(100vh - 54px);
-      display:grid;grid-template-columns: 1.1fr .9fr;
+      height:calc(100% - 48px);
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:0;
     }
-    .pane{min-width:0; border-right:1px solid var(--line)}
-    .pane:last-child{border-right:none}
-    iframe{width:100%;height:100%;border:0;background:#fff}
-    .notes{
-      height:100%; overflow:auto; padding:12px;
-      background:radial-gradient(800px 500px at 50% 0%, rgba(120,170,255,.10), transparent 60%);
+
+    .col{
+      height:100%;
+      overflow:auto;
+      position:relative;
     }
-    .note{
-      border:1px solid var(--line); border-radius:16px; padding:10px; margin:10px 0;
-      background:rgba(255,255,255,.05);
+    .col.left{
+      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+      border-right:1px solid var(--line);
     }
-    .note.active{outline:2px solid rgba(120,170,255,.55); background:rgba(120,170,255,.10)}
-    .note .meta{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .note .k{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%}
-    .note textarea{
-      width:100%; min-height:86px; resize:vertical;
-      background:rgba(0,0,0,.25); color:var(--txt);
-      border:1px solid var(--line); border-radius:12px; padding:10px; outline:none;
-      font: 14px/1.4 system-ui,Segoe UI,Arial;
+    .col.right{
+      background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));
     }
-    .note textarea:focus{border-color:rgba(120,170,255,.75)}
-    .hint{font-size:12px;color:var(--muted)}
+
+    .inner{
+      padding:18px 18px 80px;
+      max-width: 980px;
+      margin:0 auto;
+    }
+
+    /* Reference blocks + marker */
+    .refBlock{
+      position:relative;           /* <- crucial ώστε να “κάτσει” το marker */
+      padding-right:34px;          /* χώρος για το marker */
+      scroll-margin-top: 12px;
+    }
+    .refMarker{
+      position:absolute;
+      right:6px;
+      top:0;
+      z-index:9999;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:24px;
+      height:24px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:rgba(119,166,255,.14);
+      color:var(--text);
+      font-size:14px;
+      user-select:none;
+      cursor:pointer;
+      box-shadow:0 8px 20px rgba(0,0,0,.25);
+    }
+    .refBlock:hover .refMarker{ background:rgba(119,166,255,.22); }
+    .refActive{
+      outline:2px solid rgba(119,166,255,.45);
+      outline-offset: 6px;
+      border-radius: 10px;
+    }
+
+    /* Notes */
+    .noteBlock{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      border-radius:16px;
+      padding:12px 12px 12px;
+      margin:10px 0;
+      scroll-margin-top: 12px;
+    }
+    .noteHead{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .noteHead .tag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+    }
+    .noteHead .chip{
+      font-size:12px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+    }
+    .noteText{
+      min-height:72px;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px dashed rgba(255,255,255,.16);
+      background:rgba(0,0,0,.12);
+      outline:none;
+      color:var(--text);
+      line-height:1.45;
+    }
+    .noteText:focus{
+      border-color: rgba(119,166,255,.45);
+      box-shadow:0 0 0 3px rgba(119,166,255,.12);
+    }
+
+    /* Make reference content look ok inside our shell */
+    #refHost{
+      background:transparent;
+      color:var(--text);
+    }
+    /* keep images responsive */
+    #refHost img{ max-width:100%; height:auto; }
+
+    /* small helper */
+    .hint{
+      color:var(--muted);
+      font-size:13px;
+      margin:0 0 12px;
+    }
   </style>
 </head>
 
 <body>
   <div class="topbar">
-    <div class="left">
-      <div class="chip">Αριστερά: yPhysicsALyceum1.html (local)</div>
-      <div class="chip">Δεξιά: note ανά παράγραφο/ενότητα</div>
-    </div>
-    <div class="right">
-      <button id="btnExport">Export notes (JSON)</button>
-      <button id="btnClear">Clear notes</button>
-    </div>
+    <span class="pill">Αριστερά: <b>Reference</b></span>
+    <span class="pill">Δεξιά: <b>Notes</b></span>
+    <span class="pill">Markers: <b id="count">0</b></span>
+    <span class="pill">Tip: click <b>🔖</b> για jump/δέσιμο</span>
   </div>
 
   <div class="wrap">
-    <div class="pane">
-      <iframe id="ref" src="yPhysicsALyceum1.html"></iframe>
+    <div class="col left" id="refCol">
+      <div class="inner">
+        <div class="hint">Η αναφορά φορτώνεται τοπικά από <code>yPhysicsALyceum7.html</code> και γίνεται “σπάσιμο” σε blocks με markers (🔖).</div>
+        <div id="refHost"></div>
+      </div>
     </div>
 
-    <div class="pane">
-      <div class="notes" id="notes">
-        <div class="hint">Tip: σκρόλαρε αριστερά → σε πάει στη σωστή σημείωση. Κάνε κλικ/Focus σε σημείωση → σε πάει στο σωστό σημείο αριστερά.</div>
+    <div class="col right" id="noteCol">
+      <div class="inner" id="notesHost">
+        <div class="hint">Γράφεις ελεύθερα. Κάθε block αριστερά έχει αντίστοιχο note δεξιά.</div>
       </div>
     </div>
   </div>
 
 <script>
 (() => {
-  const iframe = document.getElementById('ref');
-  const notesEl = document.getElementById('notes');
-  const btnExport = document.getElementById('btnExport');
-  const btnClear = document.getElementById('btnClear');
+  const REF_FILE = "yPhysicsALyceum7.html";
 
-  const STORAGE_KEY = 'yphysics_notes_v1';
-  const notesStore = loadStore();
+  const refCol = document.getElementById("refCol");
+  const noteCol = document.getElementById("noteCol");
+  const refHost = document.getElementById("refHost");
+  const notesHost = document.getElementById("notesHost");
+  const countEl = document.getElementById("count");
 
-  let refBlocks = [];            // [{id, el, label}]
-  let noteNodesById = new Map(); // id -> noteDiv
-  let activeId = null;
-  let programmaticScroll = false;
+  const selector = "h1,h2,h3,h4,h5,h6,p,li,blockquote,pre";
+  let refBlocks = [];
+  let noteBlocks = [];
+  let lock = false;
 
-  function loadStore(){
-    try{ return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
-    catch{ return {}; }
-  }
-  function saveStore(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(notesStore));
+  function setActive(i){
+    refBlocks.forEach(el => el.classList.remove("refActive"));
+    if(refBlocks[i]) refBlocks[i].classList.add("refActive");
   }
 
-  function safeLabelFromEl(el){
-    // Παίρνουμε “νόημα” χωρίς να ρουφάμε όλο το κείμενο
-    const t = (el.innerText || el.textContent || '').replace(/\s+/g,' ').trim();
-    if(!t) return el.tagName.toLowerCase();
-    return t.length > 120 ? t.slice(0,120) + '…' : t;
+  function scrollToBlock(i){
+    if(!refBlocks[i] || !noteBlocks[i]) return;
+    lock = true;
+
+    refBlocks[i].scrollIntoView({block:"center", behavior:"smooth"});
+    noteBlocks[i].scrollIntoView({block:"center", behavior:"smooth"});
+    setActive(i);
+
+    setTimeout(() => { lock = false; }, 350);
   }
 
-  function buildNotesUI(){
-    // καθάρισε παλιά (κρατά το hint)
-    const hint = notesEl.querySelector('.hint');
-    notesEl.innerHTML = '';
-    if(hint) notesEl.appendChild(hint);
+  function buildNotes(n){
+    // καθάρισμα παλιών (κρατάμε μόνο το hint που είναι 1ο child)
+    while(notesHost.children.length > 1) notesHost.removeChild(notesHost.lastChild);
 
-    noteNodesById.clear();
+    noteBlocks = [];
+    for(let i=0;i<n;i++){
+      const card = document.createElement("div");
+      card.className = "noteBlock";
+      card.dataset.rid = String(i);
 
-    for(const b of refBlocks){
-      const wrap = document.createElement('div');
-      wrap.className = 'note';
-      wrap.dataset.refId = b.id;
+      const head = document.createElement("div");
+      head.className = "noteHead";
+      head.innerHTML = `
+        <span class="tag">
+          <span class="chip">Ref #${i+1}</span>
+          <span>Σημείωση</span>
+        </span>
+        <span class="chip">🔗 Synced</span>
+      `;
 
-      const meta = document.createElement('div');
-      meta.className = 'meta';
+      const text = document.createElement("div");
+      text.className = "noteText";
+      text.contentEditable = "true";
+      text.spellcheck = true;
+      text.dataset.rid = String(i);
+      text.addEventListener("focus", () => scrollToBlock(i));
 
-      const k = document.createElement('div');
-      k.className = 'k';
-      k.title = b.label;
-      k.textContent = b.label;
+      card.appendChild(head);
+      card.appendChild(text);
+      notesHost.appendChild(card);
 
-      const jumpBtn = document.createElement('button');
-      jumpBtn.textContent = 'Jump';
-      jumpBtn.addEventListener('click', () => scrollRefTo(b.id, true));
-
-      meta.appendChild(k);
-      meta.appendChild(jumpBtn);
-
-      const ta = document.createElement('textarea');
-      ta.placeholder = 'Γράψε σημείωση για αυτό το σημείο…';
-      ta.value = notesStore[b.id] ?? '';
-
-      ta.addEventListener('input', () => {
-        notesStore[b.id] = ta.value;
-        saveStore();
-      });
-
-      ta.addEventListener('focus', () => {
-        setActive(b.id, {from:'notes'});
-        scrollRefTo(b.id, false);
-      });
-
-      wrap.appendChild(meta);
-      wrap.appendChild(ta);
-
-      notesEl.appendChild(wrap);
-      noteNodesById.set(b.id, wrap);
+      noteBlocks.push(card);
     }
   }
 
-  function setActive(id, {from} = {}){
-    if(activeId === id) return;
-    activeId = id;
-
-    // Right highlight + auto scroll
-    for(const [rid, node] of noteNodesById){
-      node.classList.toggle('active', rid === id);
-    }
-    const noteNode = noteNodesById.get(id);
-    if(noteNode && from !== 'notes'){
-      programmaticScroll = true;
-      noteNode.scrollIntoView({block:'center', behavior:'smooth'});
-      setTimeout(() => programmaticScroll = false, 250);
-    }
-
-    // Left highlight
-    const doc = iframe.contentDocument;
-    if(!doc) return;
-    doc.querySelectorAll('[data-ref-id].ref-active').forEach(n => n.classList.remove('ref-active'));
-    const el = doc.querySelector(`[data-ref-id="${CSS.escape(id)}"]`);
-    if(el) el.classList.add('ref-active');
-  }
-
-  function scrollRefTo(id, smooth){
-    const doc = iframe.contentDocument;
-    if(!doc) return;
-    const el = doc.querySelector(`[data-ref-id="${CSS.escape(id)}"]`);
-    if(!el) return;
-
-    // scroll μέσα στο iframe
-    el.scrollIntoView({block:'center', behavior: smooth ? 'smooth' : 'auto'});
-    setActive(id, {from:'notes'});
-  }
-
-  function injectRefStyles(doc){
-    const st = doc.createElement('style');
-    st.textContent = `
-      [data-ref-id]{
-        scroll-margin-top: 18px;
-        position: relative;
-        outline: 0;
-      }
-      [data-ref-id].ref-active{
-        box-shadow: 0 0 0 3px rgba(120,170,255,.55);
-        border-radius: 10px;
-      }
-      /* μικρό “σημαδάκι” για να καταλαβαίνεις ότι είναι commentable */
-      [data-ref-id]::after{
-        content: "📝";
-        position:absolute;
-        right: -24px;
-        top: 2px;
-        opacity:.28;
-        font-size: 14px;
-        pointer-events:none;
-      }
-    `;
-    doc.head.appendChild(st);
-  }
-
-  function markReferenceBlocks(doc){
-    // Διαλέγουμε νοηματικά blocks: τίτλοι/παράγραφοι/λίστες/quotes/pre
-    const selector = 'h1,h2,h3,h4,h5,h6,p,li,blockquote,pre';
-    const nodes = Array.from(doc.body.querySelectorAll(selector))
-      .filter(el => {
-        // κόψε “άδειες” γραμμές/μικροπράγματα
-        const t = (el.innerText || '').replace(/\s+/g,' ').trim();
-        if(el.tagName.toLowerCase() === 'li') return t.length >= 8;
-        if(el.tagName.toLowerCase() === 'p') return t.length >= 20;
-        if(/^h[1-6]$/.test(el.tagName.toLowerCase())) return t.length >= 2;
-        return t.length >= 10;
-      });
-
-    // Φτιάξε σταθερά ids με σειρά. Δεν πειράζουμε το αρχείο, μόνο runtime.
-    refBlocks = nodes.map((el, i) => {
-      const id = `ref_${String(i+1).padStart(4,'0')}`;
-      el.setAttribute('data-ref-id', id);
-      return { id, el, label: safeLabelFromEl(el) };
-    });
-  }
-
-  function setupSemanticSync(doc){
-    // IntersectionObserver: ποιο block είναι “στο κέντρο” της οθόνης του iframe
-    const root = doc.scrollingElement || doc.documentElement;
-
-    const obs = new IntersectionObserver((entries) => {
-      if(programmaticScroll) return;
-
-      // διάλεξε αυτό με το μεγαλύτερο intersectionRatio
-      let best = null;
-      for(const e of entries){
-        if(!e.isIntersecting) continue;
-        if(!best || e.intersectionRatio > best.intersectionRatio) best = e;
-      }
-      if(!best) return;
-
-      const id = best.target.getAttribute('data-ref-id');
-      if(id) setActive(id, {from:'ref'});
-    }, {
-      root: null, // viewport του iframe doc
-      threshold: [0.10, 0.20, 0.35, 0.50, 0.70]
+  function attachMarkers(){
+    // καθάρισε προηγούμενα markers
+    refBlocks.forEach(el => {
+      const old = el.querySelector(":scope > .refMarker");
+      if(old) old.remove();
+      el.classList.add("refBlock");
     });
 
-    for(const b of refBlocks) obs.observe(b.el);
+    refBlocks.forEach((el, i) => {
+      el.dataset.rid = String(i);
 
-    // Κλικ σε block: πήγαινε στο αντίστοιχο note (γρήγορο “σχολιάζω εδώ”)
-    doc.body.addEventListener('click', (ev) => {
-      const el = ev.target.closest('[data-ref-id]');
-      if(!el) return;
-      const id = el.getAttribute('data-ref-id');
-      if(!id) return;
-      setActive(id, {from:'ref'});
-      const noteNode = noteNodesById.get(id);
-      if(noteNode){
-        noteNode.scrollIntoView({block:'center', behavior:'smooth'});
-        const ta = noteNode.querySelector('textarea');
-        if(ta) ta.focus({preventScroll:true});
-      }
-    }, true);
+      const m = document.createElement("span");
+      m.className = "refMarker";
+      m.title = `Σημείωση για Ref #${i+1}`;
+      m.textContent = "🔖";
+      m.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        scrollToBlock(i);
+        // focus στον editor
+        const editor = noteBlocks[i]?.querySelector(".noteText");
+        if(editor) editor.focus();
+      });
+
+      el.appendChild(m);
+
+      // click whole block -> same behavior (nice)
+      el.addEventListener("click", (e) => {
+        // αν πάτησε ήδη marker, το αφήνουμε
+        if(e.target && e.target.classList && e.target.classList.contains("refMarker")) return;
+        scrollToBlock(i);
+      });
+    });
+
+    countEl.textContent = String(refBlocks.length);
   }
 
-  btnExport.addEventListener('click', () => {
-    const data = JSON.stringify(notesStore, null, 2);
-    const blob = new Blob([data], {type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'notes.json';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 500);
+  function indexBlocks(){
+    // μαζεύουμε “νοηματικά blocks”
+    const nodes = Array.from(refHost.querySelectorAll(selector));
+    refBlocks = nodes.filter(n => (n.textContent || "").trim().length > 0);
+
+    attachMarkers();
+    buildNotes(refBlocks.length);
+  }
+
+  async function loadReference(){
+    const res = await fetch(REF_FILE, {cache:"no-store"});
+    if(!res.ok) throw new Error(`Δεν βρέθηκε το ${REF_FILE} (status ${res.status})`);
+    const html = await res.text();
+
+    // parse full html, κρατάμε body
+    const doc = new DOMParser().parseFromString(html, "text/html");
+
+    // Φέρνουμε ΜΟΝΟ το body content για να μην “σκάσει” head scripts/styles του άλλου αρχείου εδώ.
+    // (Θες αναφορά, όχι να τρέχει τα πάντα.)
+    refHost.innerHTML = doc.body ? doc.body.innerHTML : html;
+
+    indexBlocks();
+  }
+
+  // Basic 1:1 scroll ratio sync (όχι τέλειο νοηματικά, αλλά κρατάει μαζί τη ροή)
+  function syncScroll(from, to){
+    if(lock) return;
+    const maxFrom = from.scrollHeight - from.clientHeight;
+    const maxTo = to.scrollHeight - to.clientHeight;
+    if(maxFrom <= 0 || maxTo <= 0) return;
+    const ratio = from.scrollTop / maxFrom;
+    lock = true;
+    to.scrollTop = ratio * maxTo;
+    setTimeout(() => { lock = false; }, 0);
+  }
+
+  refCol.addEventListener("scroll", () => syncScroll(refCol, noteCol), {passive:true});
+  noteCol.addEventListener("scroll", () => syncScroll(noteCol, refCol), {passive:true});
+
+  loadReference().catch(err => {
+    refHost.innerHTML = `<div style="padding:14px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,80,120,.08)">
+      <b>Σφάλμα φόρτωσης:</b> ${String(err.message || err)}
+      <div style="margin-top:8px;color:rgba(233,239,255,.7)">
+        Βεβαιώσου ότι το <code>${REF_FILE}</code> είναι στον <u>ίδιο</u> φάκελο με το <code>index.html</code> και ότι το ανοίγεις από server (π.χ. GitHub Pages / VSCode Live Server).
+      </div>
+    </div>`;
   });
 
-  btnClear.addEventListener('click', () => {
-    localStorage.removeItem(STORAGE_KEY);
-    for(const k of Object.keys(notesStore)) delete notesStore[k];
-    // καθάρισε τα textareas
-    document.querySelectorAll('.note textarea').forEach(t => t.value = '');
-  });
-
-  iframe.addEventListener('load', () => {
-    const doc = iframe.contentDocument;
-    if(!doc){ alert('Δεν μπορώ να διαβάσω το iframe. Βεβαιώσου ότι η yPhysicsALyceum1.html είναι local στο ίδιο repo/φάκελο.'); return; }
-
-    injectRefStyles(doc);
-    markReferenceBlocks(doc);
-    buildNotesUI();
-    setupSemanticSync(doc);
-
-    // ενεργοποίησε αρχικά το πρώτο block
-    if(refBlocks[0]) setActive(refBlocks[0].id, {from:'ref'});
-  });
 })();
 </script>
 </body>
