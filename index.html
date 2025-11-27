@@ -1,43 +1,415 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="el">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Physics Notes — Πίνακας Περιεχομένων</title>
-  <link rel="stylesheet" href="assets/app.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Σχόλια δίπλα σε Αναφορά — yPhysicsALyceum1</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --card:#111a33;
+      --card2:#0f1730;
+      --text:#e9eeff;
+      --muted:#a9b4da;
+      --accent:#7aa2ff;
+      --border:rgba(255,255,255,.10);
+      --shadow: 0 10px 35px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      color:var(--text);
+      background: radial-gradient(1200px 800px at 20% 0%, #152554 0%, var(--bg) 60%, #070a14 100%);
+      height:100vh;
+      overflow:hidden;
+    }
+
+    .topbar{
+      position:sticky; top:0; z-index:10;
+      padding:12px 14px;
+      display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+      background: linear-gradient(180deg, rgba(17,26,51,.92) 0%, rgba(15,23,48,.78) 100%);
+      border-bottom:1px solid var(--border);
+      backdrop-filter: blur(10px);
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      font-weight:800; letter-spacing:.2px;
+    }
+    .pill{
+      font-size:12px; padding:6px 10px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      border-radius:999px;
+      color:var(--muted);
+    }
+    .spacer{flex:1}
+    .btn{
+      appearance:none; border:1px solid var(--border);
+      background: rgba(0,0,0,.22);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      transition: transform .06s ease, background .2s ease, border-color .2s ease;
+      user-select:none;
+    }
+    .btn:hover{ background: rgba(122,162,255,.12); border-color: rgba(122,162,255,.35); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      background: rgba(122,162,255,.18);
+      border-color: rgba(122,162,255,.45);
+    }
+
+    .wrap{
+      height: calc(100vh - 64px);
+      padding: 14px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+
+    .panel{
+      background: rgba(17,26,51,.68);
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-width: 0;
+    }
+    .panelHead{
+      padding:10px 12px;
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+      border-bottom:1px solid var(--border);
+      background: rgba(0,0,0,.22);
+    }
+    .panelHead .title{
+      font-weight:800;
+    }
+    .panelHead .hint{
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    /* LEFT: reference */
+    iframe{
+      width:100%;
+      height:100%;
+      border:0;
+      background:#fff;
+      flex:1;
+    }
+
+    /* RIGHT: editor */
+    .toolbar{
+      display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+    }
+    .tool{
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      color:var(--text);
+      cursor:pointer;
+      font-size:13px;
+    }
+    .tool:hover{ border-color: rgba(122,162,255,.40); background: rgba(122,162,255,.10); }
+    .tool.small{ font-size:12px; padding:7px 9px; }
+    .sep{ width:1px; height:28px; background: var(--border); margin:0 2px; }
+
+    .editorWrap{
+      flex:1;
+      overflow:auto;
+      padding: 14px;
+      background: rgba(0,0,0,.14);
+    }
+    .editor{
+      min-height: 100%;
+      outline: none;
+      background: rgba(15,23,48,.45);
+      border:1px dashed rgba(255,255,255,.16);
+      border-radius:16px;
+      padding: 14px;
+      line-height:1.55;
+    }
+    .editor h1,.editor h2,.editor h3{margin:.9em 0 .5em}
+    .editor p{margin:.55em 0}
+    .editor blockquote{
+      margin: .8em 0; padding: .1em 0 .1em 12px;
+      border-left: 3px solid rgba(122,162,255,.55);
+      color: var(--muted);
+    }
+    .editor img{
+      max-width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      display:block;
+      margin: 10px 0;
+    }
+
+    /* Disclaimer */
+    .disclaimer{
+      max-width: 1100px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      padding: 0 14px 8px;
+    }
+
+    @media (max-width: 980px){
+      .wrap{ grid-template-columns: 1fr; height: calc(100vh - 104px); }
+      .topbar{ padding-bottom: 10px; }
+    }
+  </style>
 </head>
+
 <body>
-  <header class="topbar">
+  <div class="topbar">
     <div class="brand">
-      <div class="dot"></div>
-      <div>
-        <div class="title">Physics Notes</div>
-        <div class="sub">Αριστερά αναφορά • Δεξιά σημειώσεις • autosave</div>
-      </div>
+      <span>🧠 Δίπλα-δίπλα Σχολιασμός</span>
+      <span class="pill">Reference: local</span>
+      <span class="pill" id="syncState">Synced scroll: ON</span>
     </div>
-    <a class="btn" href="pages/yPhysicsALyceum7.html">Άνοιγμα Κεφαλαίου: yPhysicsALyceum7</a>
-  </header>
 
-  <main class="wrap">
-    <section class="card">
-      <h1>Πίνακας Περιεχομένων</h1>
-      <p class="muted">
-        Κάθε σελίδα είναι “δίδυμο” panel: <b>αναφορά</b> (iframe) + <b>δικές σου σημειώσεις</b> (textarea).
-        Οι σημειώσεις σώζονται αυτόματα στον browser (localStorage).
-      </p>
+    <div class="spacer"></div>
 
-      <div class="list">
-        <a class="list-item" href="pages/yPhysicsALyceum7.html">
-          <div class="li-title">yPhysicsALyceum7 — Σχολιασμός</div>
-          <div class="li-sub">Αναφορά: users.sch.gr/kassetas/yPhysicsALyceum7.htm (online ή local load)</div>
-        </a>
+    <button class="btn" id="toggleSync">Toggle Sync</button>
+    <button class="btn primary" id="saveBtn">Αποθήκευση</button>
+    <button class="btn" id="clearBtn">Καθάρισμα</button>
+    <button class="btn" id="exportBtn">Export .html</button>
+  </div>
+
+  <!-- Βάλε εδώ την αποποίηση ευθυνών σου (όπως την έχεις έτοιμη) -->
+  <div class="disclaimer">
+    <strong>Αποποίηση ευθυνών:</strong> Αυτό το site είναι προσωπικές σημειώσεις/σχολιασμός για εκπαιδευτική χρήση.
+    Η σελίδα αναφοράς φορτώνεται τοπικά ως “reference” και δεν ιδιοποιούμαστε το περιεχόμενό της.
+  </div>
+
+  <div class="wrap">
+    <!-- LEFT: Reference -->
+    <section class="panel">
+      <div class="panelHead">
+        <div class="title">Αναφορά</div>
+        <div class="hint">φορτώνει: <code>refs/yPhysicsALyceum1.html</code></div>
+      </div>
+      <iframe id="refFrame" src="refs/yPhysicsALyceum1.html" loading="eager"></iframe>
+    </section>
+
+    <!-- RIGHT: Notes -->
+    <section class="panel">
+      <div class="panelHead">
+        <div class="title">Σημειώσεις</div>
+        <div class="hint">γράφε δεξιά, scroll μαζί (same-origin)</div>
+        <div class="spacer"></div>
+
+        <div class="toolbar" aria-label="Formatting toolbar">
+          <button class="tool small" data-cmd="bold"><b>B</b></button>
+          <button class="tool small" data-cmd="italic"><i>I</i></button>
+          <button class="tool small" data-cmd="underline"><u>U</u></button>
+          <span class="sep"></span>
+          <button class="tool small" data-cmd="formatBlock" data-arg="H2">H2</button>
+          <button class="tool small" data-cmd="formatBlock" data-arg="H3">H3</button>
+          <button class="tool small" data-cmd="formatBlock" data-arg="P">P</button>
+          <span class="sep"></span>
+          <button class="tool small" data-cmd="insertUnorderedList">• List</button>
+          <button class="tool small" data-cmd="insertOrderedList">1. List</button>
+          <span class="sep"></span>
+          <button class="tool small" id="linkBtn">Link</button>
+          <button class="tool small" id="imgBtn">Εικόνα</button>
+          <input id="imgInput" type="file" accept="image/*" hidden />
+          <span class="sep"></span>
+          <button class="tool small" id="quoteBtn">Quote</button>
+          <button class="tool small" id="hrBtn">HR</button>
+        </div>
       </div>
 
-      <div class="note">
-        <b>Σημαντικό:</b> δεν ανεβάζεις ποτέ στο GitHub “κατεβασμένες” σελίδες τρίτων (HTML+_files).<br/>
-        Αν χρειάζεσαι 100% synced scroll, χρησιμοποίησε <b>φόρτωση τοπικού αρχείου αναφοράς</b> μέσα από τη σελίδα.
+      <div class="editorWrap" id="editorWrap">
+        <div id="editor" class="editor" contenteditable="true" spellcheck="true">
+          <h2>Σημειώσεις για yPhysicsALyceum1</h2>
+          <p>Γράφεις εδώ. Το scroll μπορεί να συγχρονίζεται με την αναφορά (αριστερά), επειδή φορτώνεται τοπικά στο ίδιο origin.</p>
+        </div>
       </div>
     </section>
-  </main>
+  </div>
+
+  <script>
+    // ===== Config =====
+    const REF_SRC = "refs/yPhysicsALyceum1.html";
+    const KEY = "notes:refs/yPhysicsALyceum1.html";
+
+    // ===== Elements =====
+    const refFrame = document.getElementById("refFrame");
+    const editorWrap = document.getElementById("editorWrap");
+    const editor = document.getElementById("editor");
+
+    const saveBtn = document.getElementById("saveBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const exportBtn = document.getElementById("exportBtn");
+    const toggleSync = document.getElementById("toggleSync");
+    const syncState = document.getElementById("syncState");
+
+    const linkBtn = document.getElementById("linkBtn");
+    const imgBtn = document.getElementById("imgBtn");
+    const imgInput = document.getElementById("imgInput");
+    const quoteBtn = document.getElementById("quoteBtn");
+    const hrBtn = document.getElementById("hrBtn");
+
+    // ===== State =====
+    let syncEnabled = true;
+    let lockA = false; // prevent feedback loops
+    let lockB = false;
+
+    // ===== Helpers =====
+    function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
+    function getScrollInfo(el){
+      const max = Math.max(1, el.scrollHeight - el.clientHeight);
+      return { top: el.scrollTop, max };
+    }
+
+    function setScrollRatio(el, ratio){
+      const { max } = getScrollInfo(el);
+      el.scrollTop = Math.round(max * clamp01(ratio));
+    }
+
+    function getIframeScrollEl(){
+      try{
+        const doc = refFrame.contentDocument;
+        if(!doc) return null;
+        return doc.scrollingElement || doc.documentElement;
+      }catch(e){
+        // cross-origin would end here; but in our local approach it should be ok
+        return null;
+      }
+    }
+
+    function computeRatio(el){
+      const { top, max } = getScrollInfo(el);
+      return clamp01(top / max);
+    }
+
+    // ===== Formatting =====
+    // execCommand is old but still works widely for contenteditable.
+    document.querySelectorAll("[data-cmd]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        editor.focus();
+        const cmd = btn.getAttribute("data-cmd");
+        const arg = btn.getAttribute("data-arg");
+        document.execCommand(cmd, false, arg || null);
+      });
+    });
+
+    linkBtn.addEventListener("click", ()=>{
+      editor.focus();
+      const url = prompt("Βάλε URL:", "https://");
+      if(!url) return;
+      document.execCommand("createLink", false, url);
+    });
+
+    quoteBtn.addEventListener("click", ()=>{
+      editor.focus();
+      document.execCommand("formatBlock", false, "BLOCKQUOTE");
+    });
+
+    hrBtn.addEventListener("click", ()=>{
+      editor.focus();
+      document.execCommand("insertHorizontalRule", false, null);
+    });
+
+    imgBtn.addEventListener("click", ()=> imgInput.click());
+    imgInput.addEventListener("change", ()=>{
+      const file = imgInput.files && imgInput.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        editor.focus();
+        // Insert image at caret
+        document.execCommand("insertHTML", false, `<img src="${reader.result}" alt="">`);
+        imgInput.value = "";
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // ===== Persistence =====
+    function loadNotes(){
+      const saved = localStorage.getItem(KEY);
+      if(saved) editor.innerHTML = saved;
+    }
+    function saveNotes(){
+      localStorage.setItem(KEY, editor.innerHTML);
+      saveBtn.textContent = "Αποθηκεύτηκε ✔";
+      setTimeout(()=> saveBtn.textContent = "Αποθήκευση", 900);
+    }
+    saveBtn.addEventListener("click", saveNotes);
+
+    clearBtn.addEventListener("click", ()=>{
+      editor.innerHTML = "<h2>Σημειώσεις</h2><p></p>";
+      localStorage.removeItem(KEY);
+    });
+
+    exportBtn.addEventListener("click", ()=>{
+      const blob = new Blob([`<!doctype html><meta charset="utf-8"><title>Notes Export</title>${editor.innerHTML}`], {type:"text/html;charset=utf-8"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "notes_yPhysicsALyceum1.html";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    });
+
+    // ===== Synced scroll =====
+    function setSyncUI(){
+      syncState.textContent = `Synced scroll: ${syncEnabled ? "ON" : "OFF"}`;
+      syncState.style.color = syncEnabled ? "var(--text)" : "var(--muted)";
+    }
+    toggleSync.addEventListener("click", ()=>{
+      syncEnabled = !syncEnabled;
+      setSyncUI();
+    });
+
+    editorWrap.addEventListener("scroll", ()=>{
+      if(!syncEnabled || lockB) return;
+      const iframeScrollEl = getIframeScrollEl();
+      if(!iframeScrollEl) return;
+
+      lockA = true;
+      const ratio = computeRatio(editorWrap);
+      setScrollRatio(iframeScrollEl, ratio);
+      // small delay unlock for smoother behavior
+      requestAnimationFrame(()=>{ lockA = false; });
+    }, { passive:true });
+
+    function attachIframeScroll(){
+      const iframeScrollEl = getIframeScrollEl();
+      if(!iframeScrollEl) return;
+
+      iframeScrollEl.addEventListener("scroll", ()=>{
+        if(!syncEnabled || lockA) return;
+
+        lockB = true;
+        const ratio = computeRatio(iframeScrollEl);
+        setScrollRatio(editorWrap, ratio);
+        requestAnimationFrame(()=>{ lockB = false; });
+      }, { passive:true });
+    }
+
+    // ===== Boot =====
+    refFrame.src = REF_SRC;
+    loadNotes();
+    setSyncUI();
+
+    refFrame.addEventListener("load", ()=>{
+      attachIframeScroll();
+      // optional: ensure iframe starts at top, and we match it
+      const iframeScrollEl = getIframeScrollEl();
+      if(iframeScrollEl) iframeScrollEl.scrollTop = 0;
+      editorWrap.scrollTop = 0;
+    });
+  </script>
 </body>
 </html>
