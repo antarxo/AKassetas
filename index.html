@@ -3,61 +3,497 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Reference + Σχόλια</title>
+  <title>Reference + Σχόλια (Markers + Rich Editor)</title>
+
+  <!-- Quill (Rich text editor) -->
+  <link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
+
   <style>
-    :root { --leftW: 52%; --divider: 10px; }
+    :root{
+      --leftW: 54%;
+      --divider: 10px;
+      --markerW: 46px;
+      --bg: #0b1020;
+      --panel: #0f172a;
+      --panel2: #111827;
+      --txt: #e9eefc;
+      --muted: rgba(255,255,255,.65);
+      --line: rgba(255,255,255,.10);
+      --accent: #60a5fa;
+      --accent2: #93c5fd;
+    }
+
     html,body{height:100%;margin:0}
-    body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#0b1020;color:#e9eefc;overflow:hidden}
+    body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--txt);overflow:hidden}
+
     .wrap{display:flex;height:100vh;width:100vw}
-    .left{width:var(--leftW);min-width:320px;height:100%;background:#111827}
-    .divider{width:var(--divider);background:linear-gradient(#1f2937,#0f172a);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
-    .right{flex:1;height:100%;background:#0b1020;display:flex;flex-direction:column}
-    iframe{border:0;width:100%;height:100%;display:block;background:#fff}
-    .editor{
-      flex:1; width:100%; border:0; outline:0; resize:none;
-      padding:18px 18px 28px; line-height:1.45; font-size:16px;
-      background:#0b1020; color:#e9eefc
+
+    /* LEFT */
+    .left{
+      width:var(--leftW);
+      min-width:340px;
+      height:100%;
+      background:var(--panel2);
+      position:relative;
+      overflow:hidden;
+    }
+    .refWrap{
+      position:absolute;
+      inset:0;
+      display:grid;
+      grid-template-columns: var(--markerW) 1fr;
+    }
+
+    .markers{
+      position:relative;
+      border-right:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+      overflow:hidden;
+    }
+
+    /* floating marker buttons aligned to sections */
+    .markerBtn{
+      position:absolute;
+      left:6px;
+      width:calc(var(--markerW) - 12px);
+      height:22px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.05);
+      color:var(--muted);
+      font-size:11px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      user-select:none;
+      transition:transform .08s ease, background .12s ease, border-color .12s ease, color .12s ease;
+    }
+    .markerBtn:hover{transform:translateY(-1px); border-color:rgba(255,255,255,.20); color:var(--txt)}
+    .markerBtn.active{
+      background:rgba(96,165,250,.22);
+      border-color:rgba(96,165,250,.55);
+      color:var(--accent2);
+      font-weight:600;
+    }
+    .markerBtn.hasNote{
+      box-shadow:0 0 0 2px rgba(96,165,250,.14);
+    }
+
+    iframe{
+      border:0;
+      width:100%;
+      height:100%;
+      display:block;
+      background:#fff;
+    }
+
+    .divider{
+      width:var(--divider);
+      background:linear-gradient(#1f2937,#0f172a);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+
+    /* RIGHT */
+    .right{
+      flex:1;
+      height:100%;
+      background:var(--bg);
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
     }
     .topbar{
-      height:46px; display:flex; align-items:center; gap:10px;
-      padding:0 14px; border-bottom:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.04)
+      height:46px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:0 14px;
+      border-bottom:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      white-space:nowrap;
+      overflow:hidden;
     }
     .pill{
-      font-size:12px; padding:6px 10px; border-radius:999px;
-      background:rgba(59,130,246,.18); border:1px solid rgba(59,130,246,.35);
-      color:#cfe3ff
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(96,165,250,.14);
+      border:1px solid rgba(96,165,250,.30);
+      color:#cfe3ff;
     }
+    .pill.muted{
+      background:rgba(255,255,255,.06);
+      border-color:rgba(255,255,255,.10);
+      color:rgba(255,255,255,.75);
+    }
+    .spacer{flex:1}
+
+    /* Quill sizing */
+    #editorWrap{flex:1; display:flex; flex-direction:column; min-height:0}
+    #toolbar{border:0; border-bottom:1px solid var(--line); background:rgba(255,255,255,.02)}
+    #editor{
+      flex:1;
+      min-height:0;
+      background:rgba(255,255,255,.02);
+      color:var(--txt);
+    }
+    .ql-container{border:0 !important; font-size:16px;}
+    .ql-editor{color:var(--txt);}
+    .ql-toolbar.ql-snow{border:0 !important;}
+    .ql-toolbar .ql-stroke{stroke:rgba(255,255,255,.85)}
+    .ql-toolbar .ql-fill{fill:rgba(255,255,255,.85)}
+    .ql-toolbar .ql-picker{color:rgba(255,255,255,.85)}
+    .ql-toolbar .ql-picker-options{background:#0b1020; border-color:rgba(255,255,255,.12)}
+    .ql-toolbar button:hover,
+    .ql-toolbar button.ql-active{background:rgba(96,165,250,.16)}
+    .ql-snow .ql-tooltip{background:#0b1020;border-color:rgba(255,255,255,.12);color:var(--txt)}
+    .ql-snow .ql-tooltip input{background:#111827;color:var(--txt);border-color:rgba(255,255,255,.16)}
+
+    /* small footer */
+    .hint{
+      font-size:12px;
+      color:rgba(255,255,255,.65);
+      padding:8px 14px;
+      border-top:1px solid var(--line);
+      background:rgba(255,255,255,.02);
+    }
+    .hint b{color:rgba(255,255,255,.85)}
   </style>
 </head>
 
 <body>
   <div class="wrap">
     <div class="left">
-      <iframe id="refFrame" title="Reference"></iframe>
+      <div class="refWrap">
+        <div class="markers" id="markers"></div>
+        <iframe id="refFrame" title="Reference"></iframe>
+      </div>
     </div>
+
     <div class="divider" aria-hidden="true"></div>
 
     <div class="right">
       <div class="topbar">
         <span class="pill">Reference: refs/yPhysicsALyceum1.html</span>
-        <span class="pill">Σχόλια δεξιά (plain text)</span>
+        <span class="pill muted" id="activeLabel">Marker: —</span>
+        <div class="spacer"></div>
+        <span class="pill muted">Auto-save</span>
       </div>
-      <textarea id="notes" class="editor" spellcheck="false"
-        placeholder="Γράφεις εδώ τα σχόλιά σου..."></textarea>
+
+      <div id="editorWrap">
+        <div id="toolbar">
+          <span class="ql-formats">
+            <select class="ql-header">
+              <option value="1"></option>
+              <option value="2"></option>
+              <option selected></option>
+            </select>
+            <button class="ql-bold"></button>
+            <button class="ql-italic"></button>
+            <button class="ql-underline"></button>
+            <button class="ql-strike"></button>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-blockquote"></button>
+            <button class="ql-code-block"></button>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-list" value="ordered"></button>
+            <button class="ql-list" value="bullet"></button>
+            <button class="ql-indent" value="-1"></button>
+            <button class="ql-indent" value="+1"></button>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-link"></button>
+            <button class="ql-image"></button>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-clean"></button>
+          </span>
+        </div>
+        <div id="editor"></div>
+      </div>
+
+      <div class="hint">
+        <b>Σημείωση:</b> Τα “σημαδάκια” μπαίνουν αυτόματα από τίτλους/ενότητες (h1–h4) του reference.
+        Οι σημειώσεις αποθηκεύονται <b>ανά ενότητα</b> και δέχονται <b>εικόνες</b> (upload → embed).
+      </div>
     </div>
   </div>
 
-  <script>
-    // AUTOLOAD reference από /refs
-    const DEFAULT_REF = "refs/yPhysicsALyceum1.html";
-    document.getElementById("refFrame").src = DEFAULT_REF;
+  <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
 
-    // (προαιρετικό) auto-save notes local
-    const k = "notes_v1";
-    const ta = document.getElementById("notes");
-    ta.value = localStorage.getItem(k) || "";
-    ta.addEventListener("input", () => localStorage.setItem(k, ta.value));
+  <script>
+    // ====== CONFIG ======
+    const DEFAULT_REF = "refs/yPhysicsALyceum1.html";
+
+    // headings που θεωρούμε "νοηματικές" άγκυρες
+    const HEADING_SELECTOR = "h1, h2, h3, h4";
+
+    // storage keys
+    const STORAGE_PREFIX = "refNotes_v2::"; // per marker
+
+    // ====== STATE ======
+    let sections = [];               // {id, el, top, label}
+    let activeId = null;
+    let suppressEditorSave = false;
+
+    // ====== ELEMENTS ======
+    const frame = document.getElementById("refFrame");
+    const markersEl = document.getElementById("markers");
+    const activeLabelEl = document.getElementById("activeLabel");
+
+    // ====== EDITOR (Quill) ======
+    const quill = new Quill('#editor', {
+      theme: 'snow',
+      modules: {
+        toolbar: {
+          container: '#toolbar',
+          handlers: {
+            image: () => pickAndInsertImage()
+          }
+        }
+      }
+    });
+
+    function pickAndInsertImage(){
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = () => {
+        const file = input.files && input.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const range = quill.getSelection(true) || { index: quill.getLength(), length: 0 };
+          quill.insertEmbed(range.index, "image", reader.result);
+          quill.setSelection(range.index + 1, 0);
+          saveActiveNote(); // instant save
+          updateMarkerHasNote(activeId);
+        };
+        reader.readAsDataURL(file); // embed as base64 data URL (works offline + GitHub Pages)
+      };
+      input.click();
+    }
+
+    // Auto-save on change (debounced-ish)
+    let saveT = null;
+    quill.on("text-change", () => {
+      if(suppressEditorSave) return;
+      clearTimeout(saveT);
+      saveT = setTimeout(() => {
+        saveActiveNote();
+        updateMarkerHasNote(activeId);
+      }, 250);
+    });
+
+    function noteKey(id){ return STORAGE_PREFIX + id; }
+
+    function loadNote(id){
+      suppressEditorSave = true;
+      try{
+        const raw = localStorage.getItem(noteKey(id));
+        if(raw){
+          const delta = JSON.parse(raw);
+          quill.setContents(delta);
+        }else{
+          quill.setText("");
+        }
+      }catch(e){
+        quill.setText("");
+      }finally{
+        suppressEditorSave = false;
+      }
+    }
+
+    function saveActiveNote(){
+      if(!activeId) return;
+      try{
+        const delta = quill.getContents();
+        localStorage.setItem(noteKey(activeId), JSON.stringify(delta));
+      }catch(e){
+        // αν storage γεμίσει, δεν πεθαίνουμε, απλά δεν σώζει
+      }
+    }
+
+    function hasNote(id){
+      if(!id) return false;
+      const raw = localStorage.getItem(noteKey(id));
+      if(!raw) return false;
+      try{
+        const d = JSON.parse(raw);
+        // crude check: έχει κάτι πέρα από το τελικό newline;
+        return d && d.ops && d.ops.some(op => {
+          if(typeof op.insert === "string") return op.insert.trim().length > 0;
+          if(op.insert && op.insert.image) return true;
+          return false;
+        });
+      }catch(e){
+        return raw.length > 2;
+      }
+    }
+
+    // ====== LEFT: LOAD + MARKERS + SYNC ======
+    frame.src = DEFAULT_REF;
+
+    frame.addEventListener("load", () => {
+      const doc = frame.contentDocument;
+      const win = frame.contentWindow;
+      if(!doc || !win){
+        // Αν δεν έχουμε access (θα συμβεί μόνο αν ΔΕΝ είναι same-origin)
+        markersEl.innerHTML = "";
+        activeLabelEl.textContent = "Marker: (blocked by browser)";
+        return;
+      }
+
+      // 1) κάνε τα links να ανοίγουν σε νέο tab (για να μη χάσεις το reference μέσα στο iframe)
+      doc.querySelectorAll("a[href]").forEach(a => {
+        a.setAttribute("target","_blank");
+        a.setAttribute("rel","noopener noreferrer");
+      });
+
+      // 2) μάζεψε headings ως "άγκυρες"
+      const heads = Array.from(doc.querySelectorAll(HEADING_SELECTOR));
+
+      // fallback αν το reference δεν έχει headings: φτιάξε “τεχνητικά” markers ανά μεγάλα <p>
+      let anchors = heads;
+      if(anchors.length < 3){
+        const paras = Array.from(doc.querySelectorAll("p")).filter(p => (p.textContent||"").trim().length > 40);
+        anchors = paras.slice(0, 18); // όχι άπειρα, να μην γίνει emo
+      }
+
+      // 3) δώσε IDs σε anchors
+      sections = anchors.map((el, idx) => {
+        if(!el.id) el.id = "mk_" + (idx+1);
+        const label = deriveLabel(el, idx);
+        return { id: el.id, el, top: 0, label };
+      });
+
+      // 4) υπολόγισε offsets + χτίσε markers
+      rebuildMarkers();
+
+      // 5) sync on scroll
+      win.addEventListener("scroll", () => {
+        updateSectionTops();      // refresh positions (cheap, αλλά ας είναι safe)
+        setActiveByScroll();
+        positionMarkers();        // keep aligned
+      }, { passive:true });
+
+      // 6) initial
+      updateSectionTops();
+      positionMarkers();
+      setActive(sections[0]?.id || null, true);
+
+      // 7) keep markers aligned on resize
+      window.addEventListener("resize", () => {
+        updateSectionTops();
+        positionMarkers();
+      });
+    });
+
+    function deriveLabel(el, idx){
+      const t = (el.textContent || "").replace(/\s+/g," ").trim();
+      if(t) return (idx+1) + ". " + (t.length > 26 ? t.slice(0,26) + "…" : t);
+      return (idx+1) + ". (section)";
+    }
+
+    function updateSectionTops(){
+      const win = frame.contentWindow;
+      if(!win) return;
+      sections.forEach(s => {
+        // offsetTop relative to document
+        // Using getBoundingClientRect + scrollY inside iframe
+        const r = s.el.getBoundingClientRect();
+        s.top = r.top + win.scrollY;
+      });
+    }
+
+    function rebuildMarkers(){
+      markersEl.innerHTML = "";
+      sections.forEach((s, i) => {
+        const btn = document.createElement("div");
+        btn.className = "markerBtn";
+        btn.textContent = i+1;
+        btn.title = s.label;
+        btn.dataset.id = s.id;
+        if(hasNote(s.id)) btn.classList.add("hasNote");
+        btn.addEventListener("click", () => {
+          scrollToSection(s.id);
+          setActive(s.id);
+        });
+        markersEl.appendChild(btn);
+      });
+    }
+
+    function positionMarkers(){
+      const win = frame.contentWindow;
+      const doc = frame.contentDocument;
+      if(!win || !doc) return;
+
+      const scrollY = win.scrollY;
+      const maxY = markersEl.clientHeight - 24;
+
+      sections.forEach((s) => {
+        const btn = markersEl.querySelector(`.markerBtn[data-id="${CSS.escape(s.id)}"]`);
+        if(!btn) return;
+
+        // y θέση = θέση της ενότητας μέσα στο iframe viewport + offset του markers panel
+        const y = Math.max(6, Math.min(maxY, (s.top - scrollY) + 8));
+        btn.style.top = y + "px";
+      });
+    }
+
+    function setActiveByScroll(){
+      const win = frame.contentWindow;
+      if(!win || sections.length === 0) return;
+
+      const y = win.scrollY + 12;
+      let best = sections[0];
+      for(const s of sections){
+        if(s.top <= y) best = s;
+        else break;
+      }
+      if(best && best.id !== activeId) setActive(best.id);
+    }
+
+    function setActive(id, silentLoad=false){
+      if(!id) return;
+      // save previous
+      if(activeId && !silentLoad) saveActiveNote();
+
+      activeId = id;
+
+      // UI highlight
+      markersEl.querySelectorAll(".markerBtn").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+      const s = sections.find(x => x.id === id);
+      activeLabelEl.textContent = "Marker: " + (s ? s.label : id);
+
+      // load note for this section
+      loadNote(id);
+
+      // mark note state
+      updateMarkerHasNote(id);
+    }
+
+    function updateMarkerHasNote(id){
+      if(!id) return;
+      const btn = markersEl.querySelector(`.markerBtn[data-id="${CSS.escape(id)}"]`);
+      if(!btn) return;
+      btn.classList.toggle("hasNote", hasNote(id));
+    }
+
+    function scrollToSection(id){
+      const doc = frame.contentDocument;
+      const win = frame.contentWindow;
+      if(!doc || !win) return;
+      const el = doc.getElementById(id);
+      if(!el) return;
+
+      // smooth scroll within iframe
+      const top = el.getBoundingClientRect().top + win.scrollY - 10;
+      win.scrollTo({ top, behavior: "smooth" });
+    }
   </script>
 </body>
 </html>
