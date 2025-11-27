@@ -1,499 +1,926 @@
 <!doctype html>
 <html lang="el">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Reference + Σχόλια (Markers + Rich Editor)</title>
-
-  <!-- Quill (Rich text editor) -->
-  <link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
-
+  <title>Αναφορά + Σημειώσεις (Synced Markers)</title>
   <style>
     :root{
-      --leftW: 54%;
-      --divider: 10px;
-      --markerW: 46px;
-      --bg: #0b1020;
-      --panel: #0f172a;
-      --panel2: #111827;
-      --txt: #e9eefc;
-      --muted: rgba(255,255,255,.65);
-      --line: rgba(255,255,255,.10);
-      --accent: #60a5fa;
-      --accent2: #93c5fd;
+      --bg:#0b1220;
+      --panel:#0f1a2f;
+      --panel2:#0c1528;
+      --text:#e7eefc;
+      --muted:#9fb2d9;
+      --accent:#6ea8ff;
+      --accent2:#8bffa8;
+      --danger:#ff5f6e;
+      --line:rgba(255,255,255,.10);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:18px;
+      --railW:56px;
+      --topbarH:52px;
+      --noteMaxW: 920px;
     }
 
-    html,body{height:100%;margin:0}
-    body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--txt);overflow:hidden}
-
-    .wrap{display:flex;height:100vh;width:100vw}
-
-    /* LEFT */
-    .left{
-      width:var(--leftW);
-      min-width:340px;
-      height:100%;
-      background:var(--panel2);
-      position:relative;
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1000px 600px at 20% 10%, rgba(110,168,255,.22), transparent 45%),
+                  radial-gradient(800px 500px at 85% 15%, rgba(139,255,168,.14), transparent 45%),
+                  linear-gradient(180deg, #070c16 0%, #040814 100%);
+      color:var(--text);
       overflow:hidden;
     }
-    .refWrap{
-      position:absolute;
-      inset:0;
+
+    .app{
+      height:100%;
       display:grid;
-      grid-template-columns: var(--markerW) 1fr;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+      padding:12px;
     }
 
-    .markers{
-      position:relative;
-      border-right:1px solid var(--line);
-      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+    .pane{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
       overflow:hidden;
-    }
-
-    /* floating marker buttons aligned to sections */
-    .markerBtn{
-      position:absolute;
-      left:6px;
-      width:calc(var(--markerW) - 12px);
-      height:22px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.05);
-      color:var(--muted);
-      font-size:11px;
-      cursor:pointer;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      user-select:none;
-      transition:transform .08s ease, background .12s ease, border-color .12s ease, color .12s ease;
-    }
-    .markerBtn:hover{transform:translateY(-1px); border-color:rgba(255,255,255,.20); color:var(--txt)}
-    .markerBtn.active{
-      background:rgba(96,165,250,.22);
-      border-color:rgba(96,165,250,.55);
-      color:var(--accent2);
-      font-weight:600;
-    }
-    .markerBtn.hasNote{
-      box-shadow:0 0 0 2px rgba(96,165,250,.14);
-    }
-
-    iframe{
-      border:0;
-      width:100%;
-      height:100%;
-      display:block;
-      background:#fff;
-    }
-
-    .divider{
-      width:var(--divider);
-      background:linear-gradient(#1f2937,#0f172a);
-      box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
-    }
-
-    /* RIGHT */
-    .right{
-      flex:1;
-      height:100%;
-      background:var(--bg);
       display:flex;
       flex-direction:column;
-      overflow:hidden;
+      min-width:0;
     }
+
     .topbar{
-      height:46px;
+      height:var(--topbarH);
       display:flex;
       align-items:center;
       gap:10px;
-      padding:0 14px;
+      padding:10px 12px;
+      background: linear-gradient(180deg, rgba(15,26,47,.92), rgba(12,21,40,.92));
       border-bottom:1px solid var(--line);
-      background:rgba(255,255,255,.04);
+    }
+
+    .title{
+      font-weight:700;
+      letter-spacing:.2px;
       white-space:nowrap;
       overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 42vw;
     }
-    .pill{
-      font-size:12px;
-      padding:6px 10px;
-      border-radius:999px;
-      background:rgba(96,165,250,.14);
-      border:1px solid rgba(96,165,250,.30);
-      color:#cfe3ff;
-    }
-    .pill.muted{
-      background:rgba(255,255,255,.06);
-      border-color:rgba(255,255,255,.10);
-      color:rgba(255,255,255,.75);
-    }
-    .spacer{flex:1}
 
-    /* Quill sizing */
-    #editorWrap{flex:1; display:flex; flex-direction:column; min-height:0}
-    #toolbar{border:0; border-bottom:1px solid var(--line); background:rgba(255,255,255,.02)}
-    #editor{
+    .status{
+      margin-left:auto;
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 36vw;
+    }
+
+    .btn{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      padding:8px 10px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:650;
+      font-size:13px;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+    }
+    .btn:hover{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.18); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      background: rgba(110,168,255,.18);
+      border-color: rgba(110,168,255,.35);
+    }
+    .btn.primary:hover{ background: rgba(110,168,255,.24); }
+    .btn.danger{
+      background: rgba(255,95,110,.16);
+      border-color: rgba(255,95,110,.35);
+    }
+    .btn.danger:hover{ background: rgba(255,95,110,.22); }
+
+    .toggle{
+      display:flex; align-items:center; gap:8px;
+      padding:6px 10px;
+      border-radius: 999px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.12);
+      user-select:none;
+      cursor:pointer;
+      font-weight:650;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .dot{
+      width:10px;height:10px;border-radius:999px;
+      background: rgba(255,255,255,.25);
+      border:1px solid var(--line);
+    }
+    .toggle.on{ color: var(--text); border-color: rgba(139,255,168,.35); background: rgba(139,255,168,.10); }
+    .toggle.on .dot{ background: rgba(139,255,168,.75); border-color: rgba(139,255,168,.70); }
+
+    /* Left pane (reference) */
+    .refBody{
       flex:1;
       min-height:0;
-      background:rgba(255,255,255,.02);
-      color:var(--txt);
+      display:grid;
+      grid-template-columns: var(--railW) 1fr;
     }
-    .ql-container{border:0 !important; font-size:16px;}
-    .ql-editor{color:var(--txt);}
-    .ql-toolbar.ql-snow{border:0 !important;}
-    .ql-toolbar .ql-stroke{stroke:rgba(255,255,255,.85)}
-    .ql-toolbar .ql-fill{fill:rgba(255,255,255,.85)}
-    .ql-toolbar .ql-picker{color:rgba(255,255,255,.85)}
-    .ql-toolbar .ql-picker-options{background:#0b1020; border-color:rgba(255,255,255,.12)}
-    .ql-toolbar button:hover,
-    .ql-toolbar button.ql-active{background:rgba(96,165,250,.16)}
-    .ql-snow .ql-tooltip{background:#0b1020;border-color:rgba(255,255,255,.12);color:var(--txt)}
-    .ql-snow .ql-tooltip input{background:#111827;color:var(--txt);border-color:rgba(255,255,255,.16)}
 
-    /* small footer */
-    .hint{
-      font-size:12px;
-      color:rgba(255,255,255,.65);
-      padding:8px 14px;
-      border-top:1px solid var(--line);
-      background:rgba(255,255,255,.02);
+    .rail{
+      border-right:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(12,21,40,.95), rgba(10,18,32,.95));
+      position:relative;
+      overflow:hidden;
     }
-    .hint b{color:rgba(255,255,255,.85)}
+
+    .railHint{
+      position:absolute;
+      top:10px; left:8px; right:8px;
+      font-size:11px;
+      color:rgba(231,238,252,.55);
+      line-height:1.25;
+    }
+
+    .markerBtn{
+      position:absolute;
+      left:7px;
+      width:42px;
+      height:30px;
+      border-radius: 999px;
+      border:1px solid rgba(110,168,255,.40);
+      background: rgba(110,168,255,.18);
+      color: var(--text);
+      font-weight:800;
+      font-size:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      box-shadow: 0 6px 16px rgba(0,0,0,.25);
+      transition: transform .08s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+    }
+    .markerBtn:hover{
+      background: rgba(110,168,255,.26);
+      border-color: rgba(110,168,255,.55);
+    }
+    .markerBtn.active{
+      background: rgba(139,255,168,.20);
+      border-color: rgba(139,255,168,.55);
+      transform: scale(1.04);
+    }
+
+    iframe{
+      width:100%;
+      height:100%;
+      border:0;
+      background:#fff;
+    }
+
+    /* Right pane (notes) */
+    .notesShell{
+      flex:1;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      background: linear-gradient(180deg, rgba(12,21,40,.65), rgba(9,16,30,.65));
+    }
+
+    .toolbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+      background: rgba(0,0,0,.12);
+      align-items:center;
+    }
+
+    .tool{
+      padding:7px 9px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      font-weight:750;
+      font-size:12px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .tool:hover{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.18); }
+
+    .tool.sep{
+      width:1px; height:22px;
+      padding:0; border:0; background: var(--line);
+      cursor:default;
+    }
+
+    .notesList{
+      flex:1;
+      min-height:0;
+      overflow:auto;
+      padding:14px;
+    }
+
+    .noteCard{
+      max-width: var(--noteMaxW);
+      margin: 0 auto 12px auto;
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.04);
+      box-shadow: 0 10px 26px rgba(0,0,0,.20);
+      overflow:hidden;
+    }
+
+    .noteHead{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(15,26,47,.75), rgba(12,21,40,.75));
+    }
+
+    .badge{
+      min-width:32px;
+      height:26px;
+      padding:0 10px;
+      border-radius:999px;
+      border:1px solid rgba(110,168,255,.35);
+      background: rgba(110,168,255,.14);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:900;
+      font-size:12px;
+    }
+
+    .noteTitle{
+      flex:1;
+      min-width:0;
+      font-weight:850;
+      outline:none;
+      border-radius:10px;
+      padding:6px 8px;
+      color: var(--text);
+      background: rgba(255,255,255,.03);
+      border:1px solid transparent;
+    }
+    .noteTitle:focus{ border-color: rgba(110,168,255,.35); background: rgba(110,168,255,.08); }
+
+    .miniBtns{ display:flex; gap:8px; }
+    .mini{
+      padding:6px 8px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      font-weight:800;
+      font-size:12px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .mini:hover{ background: rgba(255,255,255,.10); color: var(--text); }
+
+    .noteBody{
+      padding: 12px 12px 14px 12px;
+      background: rgba(0,0,0,.08);
+    }
+
+    .editor{
+      min-height: 130px;
+      outline:none;
+      border-radius: 14px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.16);
+      line-height: 1.55;
+    }
+
+    .editor:focus{
+      border-color: rgba(110,168,255,.35);
+      box-shadow: 0 0 0 3px rgba(110,168,255,.12);
+    }
+
+    .editor img{
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      display:block;
+      margin: 10px 0;
+      border: 1px solid rgba(255,255,255,.10);
+    }
+
+    .emptyState{
+      max-width: var(--noteMaxW);
+      margin: 0 auto;
+      border: 1px dashed rgba(255,255,255,.18);
+      border-radius: var(--radius);
+      padding: 18px;
+      color: var(--muted);
+      background: rgba(0,0,0,.12);
+    }
+
+    .pulse{
+      animation: pulse 1.2s ease-out 1;
+    }
+    @keyframes pulse{
+      0%{ box-shadow: 0 0 0 0 rgba(110,168,255,.0); }
+      40%{ box-shadow: 0 0 0 6px rgba(110,168,255,.18); }
+      100%{ box-shadow: 0 0 0 0 rgba(110,168,255,.0); }
+    }
+
+    @media (max-width: 1000px){
+      body{ overflow:auto; }
+      .app{ grid-template-columns: 1fr; height:auto; }
+      .pane{ height: 80vh; }
+      .title{ max-width: 70vw; }
+    }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="left">
-      <div class="refWrap">
-        <div class="markers" id="markers"></div>
-        <iframe id="refFrame" title="Reference"></iframe>
-      </div>
-    </div>
+  <div class="app">
 
-    <div class="divider" aria-hidden="true"></div>
-
-    <div class="right">
+    <!-- LEFT: Reference -->
+    <section class="pane" id="leftPane">
       <div class="topbar">
-        <span class="pill">Reference: refs/yPhysicsALyceum1.html</span>
-        <span class="pill muted" id="activeLabel">Marker: —</span>
-        <div class="spacer"></div>
-        <span class="pill muted">Auto-save</span>
-      </div>
+        <div class="title">Αναφορά</div>
 
-      <div id="editorWrap">
-        <div id="toolbar">
-          <span class="ql-formats">
-            <select class="ql-header">
-              <option value="1"></option>
-              <option value="2"></option>
-              <option selected></option>
-            </select>
-            <button class="ql-bold"></button>
-            <button class="ql-italic"></button>
-            <button class="ql-underline"></button>
-            <button class="ql-strike"></button>
-          </span>
-          <span class="ql-formats">
-            <button class="ql-blockquote"></button>
-            <button class="ql-code-block"></button>
-          </span>
-          <span class="ql-formats">
-            <button class="ql-list" value="ordered"></button>
-            <button class="ql-list" value="bullet"></button>
-            <button class="ql-indent" value="-1"></button>
-            <button class="ql-indent" value="+1"></button>
-          </span>
-          <span class="ql-formats">
-            <button class="ql-link"></button>
-            <button class="ql-image"></button>
-          </span>
-          <span class="ql-formats">
-            <button class="ql-clean"></button>
-          </span>
+        <button class="btn primary" id="btnAddMark" title="Βάζει σημάδι στο τρέχον σημείο (scroll) της αναφοράς">+ Σημάδι</button>
+        <div class="toggle" id="toggleSync" title="Νοηματικό sync: σκρολάρεις αριστερά → ενεργοποιείται το κοντινό σημάδι & σε πάει στη σωστή ενότητα">
+          <span class="dot"></span> SYNC
         </div>
-        <div id="editor"></div>
+
+        <button class="btn" id="btnReloadRef" title="Reload την αναφορά">Reload</button>
+        <button class="btn danger" id="btnClearAll" title="Σβήνει ΟΛΑ τα σημάδια & σημειώσεις (μόνο σε αυτό το ref)">Reset</button>
+
+        <div class="status" id="refStatus">φόρτωση…</div>
       </div>
 
-      <div class="hint">
-        <b>Σημείωση:</b> Τα “σημαδάκια” μπαίνουν αυτόματα από τίτλους/ενότητες (h1–h4) του reference.
-        Οι σημειώσεις αποθηκεύονται <b>ανά ενότητα</b> και δέχονται <b>εικόνες</b> (upload → embed).
+      <div class="refBody">
+        <div class="rail" id="rail">
+          <div class="railHint">Σημάδια<br>αριστερά</div>
+          <div id="railMarkers"></div>
+        </div>
+
+        <iframe id="refFrame" src="refs/yPhysicsALyceum1.html"></iframe>
       </div>
-    </div>
+    </section>
+
+    <!-- RIGHT: Notes -->
+    <section class="pane" id="rightPane">
+      <div class="topbar">
+        <div class="title">Σημειώσεις</div>
+
+        <button class="btn" id="btnExport" title="Εξαγωγή σε JSON (backup)">Export</button>
+        <button class="btn" id="btnImport" title="Εισαγωγή από JSON (restore)">Import</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none" />
+
+        <div class="status" id="notesStatus">—</div>
+      </div>
+
+      <div class="notesShell">
+        <div class="toolbar" id="toolbar">
+          <div class="tool" data-cmd="bold"><b>B</b></div>
+          <div class="tool" data-cmd="italic"><i>I</i></div>
+          <div class="tool" data-cmd="underline"><u>U</u></div>
+          <div class="tool sep"></div>
+          <div class="tool" data-cmd="formatBlock" data-arg="H2">H2</div>
+          <div class="tool" data-cmd="formatBlock" data-arg="H3">H3</div>
+          <div class="tool" data-cmd="formatBlock" data-arg="BLOCKQUOTE">❝</div>
+          <div class="tool" data-cmd="formatBlock" data-arg="PRE">{"{}"}</div>
+          <div class="tool sep"></div>
+          <div class="tool" data-cmd="insertUnorderedList">• List</div>
+          <div class="tool" data-cmd="insertOrderedList">1. List</div>
+          <div class="tool sep"></div>
+          <div class="tool" id="btnLink">Link</div>
+          <div class="tool" id="btnImgUrl">Εικόνα URL</div>
+          <div class="tool" id="btnImgUpload">Εικόνα Upload</div>
+          <input type="file" id="imgFile" accept="image/*" style="display:none" />
+        </div>
+
+        <div class="notesList" id="notesList">
+          <div class="emptyState" id="emptyState">
+            Δεν έχεις βάλει σημάδια ακόμα. Πήγαινε αριστερά στο σημείο που θες και πάτα <b>+ Σημάδι</b>.<br>
+            Tip: Κάθε σημάδι ανοίγει τη δική του “σκηνή” για σημειώσεις δεξιά.
+          </div>
+        </div>
+      </div>
+    </section>
+
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+<script>
+(() => {
+  const REF_SRC = "refs/yPhysicsALyceum1.html";
 
-  <script>
-    // ====== CONFIG ======
-    const DEFAULT_REF = "refs/yPhysicsALyceum1.html";
+  const els = {
+    refFrame: document.getElementById("refFrame"),
+    refStatus: document.getElementById("refStatus"),
+    notesStatus: document.getElementById("notesStatus"),
+    railMarkers: document.getElementById("railMarkers"),
+    rail: document.getElementById("rail"),
+    btnAddMark: document.getElementById("btnAddMark"),
+    btnReloadRef: document.getElementById("btnReloadRef"),
+    btnClearAll: document.getElementById("btnClearAll"),
+    toggleSync: document.getElementById("toggleSync"),
+    notesList: document.getElementById("notesList"),
+    emptyState: document.getElementById("emptyState"),
+    toolbar: document.getElementById("toolbar"),
+    btnExport: document.getElementById("btnExport"),
+    btnImport: document.getElementById("btnImport"),
+    importFile: document.getElementById("importFile"),
+    btnLink: document.getElementById("btnLink"),
+    btnImgUrl: document.getElementById("btnImgUrl"),
+    btnImgUpload: document.getElementById("btnImgUpload"),
+    imgFile: document.getElementById("imgFile"),
+  };
 
-    // headings που θεωρούμε "νοηματικές" άγκυρες
-    const HEADING_SELECTOR = "h1, h2, h3, h4";
+  // Force src (so δεν “χάνεται” αν κάτι το άλλαξε)
+  els.refFrame.src = REF_SRC;
 
-    // storage keys
-    const STORAGE_PREFIX = "refNotes_v2::"; // per marker
+  const storageKey = (name) => `${name}::${location.origin}${location.pathname}::${REF_SRC}`;
 
-    // ====== STATE ======
-    let sections = [];               // {id, el, top, label}
-    let activeId = null;
-    let suppressEditorSave = false;
+  function safeParse(json, fallback){
+    try { return JSON.parse(json); } catch { return fallback; }
+  }
 
-    // ====== ELEMENTS ======
-    const frame = document.getElementById("refFrame");
-    const markersEl = document.getElementById("markers");
-    const activeLabelEl = document.getElementById("activeLabel");
+  function uid(){
+    return Math.random().toString(16).slice(2) + Date.now().toString(16);
+  }
 
-    // ====== EDITOR (Quill) ======
-    const quill = new Quill('#editor', {
-      theme: 'snow',
-      modules: {
-        toolbar: {
-          container: '#toolbar',
-          handlers: {
-            image: () => pickAndInsertImage()
-          }
+  // Data model
+  let state = {
+    syncOn: false,
+    activeId: null,
+    markers: [], // {id, title, y, createdAt}
+    notes: {}    // id -> html
+  };
+
+  // Load / Save
+  function load(){
+    state.syncOn = safeParse(localStorage.getItem(storageKey("syncOn")), false) === true;
+    state.markers = safeParse(localStorage.getItem(storageKey("markers")), []);
+    state.notes   = safeParse(localStorage.getItem(storageKey("notes")), {});
+    // sanitize
+    if(!Array.isArray(state.markers)) state.markers = [];
+    if(typeof state.notes !== "object" || !state.notes) state.notes = {};
+    state.markers.sort((a,b)=> (a.y ?? 0) - (b.y ?? 0));
+    applySyncUI();
+    renderAll();
+  }
+
+  function save(){
+    localStorage.setItem(storageKey("syncOn"), JSON.stringify(state.syncOn));
+    localStorage.setItem(storageKey("markers"), JSON.stringify(state.markers));
+    localStorage.setItem(storageKey("notes"), JSON.stringify(state.notes));
+    updateStatuses();
+  }
+
+  function updateStatuses(extra=""){
+    els.notesStatus.textContent = `${state.markers.length} σημάδια · autosave ON${extra ? " · " + extra : ""}`;
+  }
+
+  // Reference access
+  function getRefDoc(){
+    try { return els.refFrame.contentDocument; } catch { return null; }
+  }
+  function getRefWin(){
+    try { return els.refFrame.contentWindow; } catch { return null; }
+  }
+  function getScrollEl(){
+    const doc = getRefDoc();
+    if(!doc) return null;
+    return doc.scrollingElement || doc.documentElement || doc.body;
+  }
+
+  function canAccessRef(){
+    const doc = getRefDoc();
+    const win = getRefWin();
+    if(!doc || !win) return false;
+    // same-origin check: accessing doc.body should throw if blocked
+    try { void doc.body; return true; } catch { return false; }
+  }
+
+  // Rendering
+  function renderRailMarkers(){
+    els.railMarkers.innerHTML = "";
+    const maxY = Math.max(0, els.rail.clientHeight - 44);
+
+    state.markers.forEach((m, idx) => {
+      const b = document.createElement("div");
+      b.className = "markerBtn" + (m.id === state.activeId ? " active" : "");
+      b.textContent = String(idx + 1);
+      b.title = `${idx+1}. ${m.title || "(χωρίς τίτλο)"}`;
+
+      // map ref y -> rail y (ratio)
+      const scrollEl = getScrollEl();
+      const refMax = scrollEl ? Math.max(1, scrollEl.scrollHeight - scrollEl.clientHeight) : 1;
+      const ratio = Math.min(1, Math.max(0, (m.y || 0) / refMax));
+      const top = Math.round(6 + ratio * maxY);
+
+      b.style.top = `${top}px`;
+
+      b.addEventListener("click", () => {
+        activateMarker(m.id, {scrollRef:true, scrollNote:true, flash:true});
+      });
+
+      els.railMarkers.appendChild(b);
+    });
+  }
+
+  function renderNotes(){
+    // Clear everything except emptyState placeholder
+    els.notesList.querySelectorAll(".noteCard").forEach(n => n.remove());
+    els.emptyState.style.display = state.markers.length ? "none" : "block";
+
+    state.markers.forEach((m, idx) => {
+      const card = document.createElement("div");
+      card.className = "noteCard";
+      card.dataset.id = m.id;
+
+      const head = document.createElement("div");
+      head.className = "noteHead";
+
+      const badge = document.createElement("div");
+      badge.className = "badge";
+      badge.textContent = String(idx + 1);
+
+      const title = document.createElement("div");
+      title.className = "noteTitle";
+      title.contentEditable = "true";
+      title.spellcheck = false;
+      title.textContent = m.title || `Σημείωση ${idx+1}`;
+
+      title.addEventListener("input", () => {
+        m.title = title.textContent.trim();
+        save();
+        renderRailMarkers();
+      });
+
+      const miniBtns = document.createElement("div");
+      miniBtns.className = "miniBtns";
+
+      const btnGo = document.createElement("div");
+      btnGo.className = "mini";
+      btnGo.textContent = "↔";
+      btnGo.title = "Πήγαινε στο αντίστοιχο σημείο της αναφοράς";
+      btnGo.addEventListener("click", () => activateMarker(m.id, {scrollRef:true, scrollNote:false, flash:true}));
+
+      const btnDel = document.createElement("div");
+      btnDel.className = "mini";
+      btnDel.textContent = "🗑";
+      btnDel.title = "Διαγραφή αυτού του σημαδιού";
+      btnDel.addEventListener("click", () => deleteMarker(m.id));
+
+      miniBtns.append(btnGo, btnDel);
+
+      head.append(badge, title, miniBtns);
+
+      const body = document.createElement("div");
+      body.className = "noteBody";
+
+      const editor = document.createElement("div");
+      editor.className = "editor";
+      editor.contentEditable = "true";
+      editor.spellcheck = false;
+      editor.dataset.id = m.id;
+      editor.innerHTML = state.notes[m.id] || "";
+
+      editor.addEventListener("focus", () => {
+        state.activeId = m.id;
+        renderRailMarkers();
+      });
+
+      editor.addEventListener("input", () => {
+        state.notes[m.id] = editor.innerHTML;
+        save();
+      });
+
+      body.appendChild(editor);
+      card.append(head, body);
+      els.notesList.appendChild(card);
+    });
+  }
+
+  function renderAll(){
+    renderRailMarkers();
+    renderNotes();
+    updateStatuses();
+  }
+
+  function applySyncUI(){
+    els.toggleSync.classList.toggle("on", state.syncOn);
+  }
+
+  // Core actions
+  async function addMarker(){
+    if(!canAccessRef()){
+      els.refStatus.textContent = "BLOCKED: δεν έχω πρόσβαση στο iframe (άνοιξε με server/Pages, όχι file://).";
+      els.refStatus.style.color = "rgba(255,95,110,.95)";
+      return;
+    }
+
+    const win = getRefWin();
+    const scrollEl = getScrollEl();
+    if(!win || !scrollEl) return;
+
+    const y = Math.round(scrollEl.scrollTop || win.scrollY || 0);
+    const title = prompt("Τίτλος σημαδιού (π.χ. «Νόμος του Hooke», «Ενέργεια»):", "") ?? "";
+    const id = uid();
+
+    state.markers.push({ id, title: title.trim(), y, createdAt: Date.now() });
+    state.markers.sort((a,b)=> (a.y ?? 0) - (b.y ?? 0));
+    if(!state.notes[id]) state.notes[id] = "";
+    state.activeId = id;
+
+    save();
+    renderAll();
+    activateMarker(id, {scrollRef:false, scrollNote:true, flash:true});
+  }
+
+  function deleteMarker(id){
+    const idx = state.markers.findIndex(m => m.id === id);
+    if(idx === -1) return;
+    const m = state.markers[idx];
+    const ok = confirm(`Διαγραφή σημαδιού${m.title ? " «" + m.title + "»" : ""}; Θα σβηστούν και οι σημειώσεις του.`);
+    if(!ok) return;
+
+    state.markers.splice(idx, 1);
+    delete state.notes[id];
+
+    if(state.activeId === id) state.activeId = state.markers[0]?.id ?? null;
+
+    save();
+    renderAll();
+  }
+
+  function activateMarker(id, opts={scrollRef:true, scrollNote:true, flash:false}){
+    const m = state.markers.find(x => x.id === id);
+    if(!m) return;
+    state.activeId = id;
+    renderRailMarkers();
+
+    if(opts.scrollRef && canAccessRef()){
+      const scrollEl = getScrollEl();
+      if(scrollEl) scrollEl.scrollTop = m.y || 0;
+    }
+
+    if(opts.scrollNote){
+      const card = els.notesList.querySelector(`.noteCard[data-id="${CSS.escape(id)}"]`);
+      if(card) {
+        card.scrollIntoView({behavior:"smooth", block:"start"});
+        if(opts.flash){
+          card.classList.remove("pulse");
+          void card.offsetWidth;
+          card.classList.add("pulse");
         }
       }
-    });
-
-    function pickAndInsertImage(){
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.onchange = () => {
-        const file = input.files && input.files[0];
-        if(!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          const range = quill.getSelection(true) || { index: quill.getLength(), length: 0 };
-          quill.insertEmbed(range.index, "image", reader.result);
-          quill.setSelection(range.index + 1, 0);
-          saveActiveNote(); // instant save
-          updateMarkerHasNote(activeId);
-        };
-        reader.readAsDataURL(file); // embed as base64 data URL (works offline + GitHub Pages)
-      };
-      input.click();
     }
+  }
 
-    // Auto-save on change (debounced-ish)
-    let saveT = null;
-    quill.on("text-change", () => {
-      if(suppressEditorSave) return;
-      clearTimeout(saveT);
-      saveT = setTimeout(() => {
-        saveActiveNote();
-        updateMarkerHasNote(activeId);
-      }, 250);
-    });
+  // “Meaningful sync”: left scroll => nearest marker
+  function nearestMarkerIdForY(y){
+    if(!state.markers.length) return null;
+    let best = state.markers[0];
+    for(const m of state.markers){
+      if((m.y ?? 0) <= y) best = m;
+      else break;
+    }
+    return best?.id ?? null;
+  }
 
-    function noteKey(id){ return STORAGE_PREFIX + id; }
+  function onLeftScroll(){
+    if(!state.syncOn) return;
+    if(!canAccessRef()) return;
 
-    function loadNote(id){
-      suppressEditorSave = true;
-      try{
-        const raw = localStorage.getItem(noteKey(id));
-        if(raw){
-          const delta = JSON.parse(raw);
-          quill.setContents(delta);
-        }else{
-          quill.setText("");
-        }
-      }catch(e){
-        quill.setText("");
-      }finally{
-        suppressEditorSave = false;
+    const scrollEl = getScrollEl();
+    if(!scrollEl) return;
+
+    const y = Math.round(scrollEl.scrollTop || 0);
+    const id = nearestMarkerIdForY(y);
+    if(!id) return;
+
+    if(state.activeId !== id){
+      state.activeId = id;
+      renderRailMarkers();
+      // scroll note quietly
+      const card = els.notesList.querySelector(`.noteCard[data-id="${CSS.escape(id)}"]`);
+      if(card) card.scrollIntoView({behavior:"smooth", block:"start"});
+    }
+  }
+
+  function reloadRef(){
+    els.refFrame.src = REF_SRC + (REF_SRC.includes("?") ? "&" : "?") + "v=" + Date.now();
+  }
+
+  function clearAll(){
+    const ok = confirm("RESET: Θα διαγραφούν ΟΛΑ τα σημάδια/σημειώσεις για αυτό το reference. Συνεχίζουμε;");
+    if(!ok) return;
+    state.markers = [];
+    state.notes = {};
+    state.activeId = null;
+    save();
+    renderAll();
+  }
+
+  // Editor toolbar
+  function getActiveEditor(){
+    // activeId -> find editor
+    if(!state.activeId) return null;
+    return els.notesList.querySelector(`.editor[data-id="${CSS.escape(state.activeId)}"]`) || null;
+  }
+
+  function exec(cmd, arg=null){
+    const ed = getActiveEditor();
+    if(!ed) return;
+
+    ed.focus();
+    try{
+      if(cmd === "formatBlock"){
+        document.execCommand(cmd, false, arg);
+      }else if(arg !== null){
+        document.execCommand(cmd, false, arg);
+      }else{
+        document.execCommand(cmd, false);
       }
+    }catch(e){}
+  }
+
+  function insertLink(){
+    const ed = getActiveEditor();
+    if(!ed) return;
+    const url = prompt("Βάλε URL (π.χ. https://...):", "https://");
+    if(!url) return;
+    exec("createLink", url.trim());
+  }
+
+  function insertImageFromUrl(){
+    const ed = getActiveEditor();
+    if(!ed) return;
+    const url = prompt("URL εικόνας:", "https://");
+    if(!url) return;
+
+    ed.focus();
+    const img = document.createElement("img");
+    img.src = url.trim();
+    img.alt = "";
+    insertNodeAtCursor(img);
+    state.notes[state.activeId] = ed.innerHTML;
+    save();
+  }
+
+  function insertNodeAtCursor(node){
+    const sel = window.getSelection();
+    if(!sel || sel.rangeCount === 0){
+      document.execCommand("insertHTML", false, node.outerHTML);
+      return;
     }
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(node);
+    // move cursor after node
+    range.setStartAfter(node);
+    range.setEndAfter(node);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
 
-    function saveActiveNote(){
-      if(!activeId) return;
-      try{
-        const delta = quill.getContents();
-        localStorage.setItem(noteKey(activeId), JSON.stringify(delta));
-      }catch(e){
-        // αν storage γεμίσει, δεν πεθαίνουμε, απλά δεν σώζει
-      }
-    }
+  function insertImageFromFile(file){
+    const ed = getActiveEditor();
+    if(!ed) return;
 
-    function hasNote(id){
-      if(!id) return false;
-      const raw = localStorage.getItem(noteKey(id));
-      if(!raw) return false;
-      try{
-        const d = JSON.parse(raw);
-        // crude check: έχει κάτι πέρα από το τελικό newline;
-        return d && d.ops && d.ops.some(op => {
-          if(typeof op.insert === "string") return op.insert.trim().length > 0;
-          if(op.insert && op.insert.image) return true;
-          return false;
-        });
-      }catch(e){
-        return raw.length > 2;
-      }
-    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      ed.focus();
+      const img = document.createElement("img");
+      img.src = String(reader.result);
+      img.alt = file.name || "";
+      insertNodeAtCursor(img);
+      state.notes[state.activeId] = ed.innerHTML;
+      save();
+      // NOTE: base64 images eat storage. Ο χρήστης το ξέρει, αλλά εδώ το κάνουμε πρακτικά.
+    };
+    reader.readAsDataURL(file);
+  }
 
-    // ====== LEFT: LOAD + MARKERS + SYNC ======
-    frame.src = DEFAULT_REF;
+  // Export / Import
+  function doExport(){
+    const payload = {
+      ref: REF_SRC,
+      when: new Date().toISOString(),
+      markers: state.markers,
+      notes: state.notes
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `notes_${REF_SRC.replace(/[^\w]+/g,"_")}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  }
 
-    frame.addEventListener("load", () => {
-      const doc = frame.contentDocument;
-      const win = frame.contentWindow;
-      if(!doc || !win){
-        // Αν δεν έχουμε access (θα συμβεί μόνο αν ΔΕΝ είναι same-origin)
-        markersEl.innerHTML = "";
-        activeLabelEl.textContent = "Marker: (blocked by browser)";
+  function doImportFile(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      const payload = safeParse(String(reader.result), null);
+      if(!payload || !Array.isArray(payload.markers) || typeof payload.notes !== "object"){
+        alert("Το JSON δεν είναι έγκυρο export αρχείο.");
         return;
       }
+      state.markers = payload.markers;
+      state.notes = payload.notes || {};
+      state.markers.sort((a,b)=> (a.y ?? 0) - (b.y ?? 0));
+      state.activeId = state.markers[0]?.id ?? null;
+      save();
+      renderAll();
+      alert("OK: έγινε εισαγωγή.");
+    };
+    reader.readAsText(file, "utf-8");
+  }
 
-      // 1) κάνε τα links να ανοίγουν σε νέο tab (για να μη χάσεις το reference μέσα στο iframe)
-      doc.querySelectorAll("a[href]").forEach(a => {
-        a.setAttribute("target","_blank");
-        a.setAttribute("rel","noopener noreferrer");
-      });
+  // Events
+  els.btnAddMark.addEventListener("click", addMarker);
+  els.btnReloadRef.addEventListener("click", reloadRef);
+  els.btnClearAll.addEventListener("click", clearAll);
 
-      // 2) μάζεψε headings ως "άγκυρες"
-      const heads = Array.from(doc.querySelectorAll(HEADING_SELECTOR));
+  els.toggleSync.addEventListener("click", () => {
+    state.syncOn = !state.syncOn;
+    applySyncUI();
+    save();
+  });
 
-      // fallback αν το reference δεν έχει headings: φτιάξε “τεχνητικά” markers ανά μεγάλα <p>
-      let anchors = heads;
-      if(anchors.length < 3){
-        const paras = Array.from(doc.querySelectorAll("p")).filter(p => (p.textContent||"").trim().length > 40);
-        anchors = paras.slice(0, 18); // όχι άπειρα, να μην γίνει emo
-      }
+  els.toolbar.addEventListener("click", (e) => {
+    const t = e.target.closest(".tool");
+    if(!t || t.classList.contains("sep")) return;
 
-      // 3) δώσε IDs σε anchors
-      sections = anchors.map((el, idx) => {
-        if(!el.id) el.id = "mk_" + (idx+1);
-        const label = deriveLabel(el, idx);
-        return { id: el.id, el, top: 0, label };
-      });
+    if(t.id === "btnLink"){ insertLink(); return; }
+    if(t.id === "btnImgUrl"){ insertImageFromUrl(); return; }
+    if(t.id === "btnImgUpload"){ els.imgFile.click(); return; }
 
-      // 4) υπολόγισε offsets + χτίσε markers
-      rebuildMarkers();
+    const cmd = t.dataset.cmd;
+    const arg = t.dataset.arg;
+    if(!cmd) return;
+    exec(cmd, arg || null);
+  });
 
-      // 5) sync on scroll
-      win.addEventListener("scroll", () => {
-        updateSectionTops();      // refresh positions (cheap, αλλά ας είναι safe)
-        setActiveByScroll();
-        positionMarkers();        // keep aligned
-      }, { passive:true });
+  els.imgFile.addEventListener("change", () => {
+    const f = els.imgFile.files?.[0];
+    els.imgFile.value = "";
+    if(!f) return;
+    insertImageFromFile(f);
+  });
 
-      // 6) initial
-      updateSectionTops();
-      positionMarkers();
-      setActive(sections[0]?.id || null, true);
+  els.btnExport.addEventListener("click", doExport);
+  els.btnImport.addEventListener("click", () => els.importFile.click());
+  els.importFile.addEventListener("change", () => {
+    const f = els.importFile.files?.[0];
+    els.importFile.value = "";
+    if(!f) return;
+    doImportFile(f);
+  });
 
-      // 7) keep markers aligned on resize
-      window.addEventListener("resize", () => {
-        updateSectionTops();
-        positionMarkers();
-      });
-    });
+  // Iframe load + scroll binding
+  els.refFrame.addEventListener("load", () => {
+    // status
+    if(canAccessRef()){
+      els.refStatus.textContent = "OK: reference φορτώθηκε (same-origin).";
+      els.refStatus.style.color = "rgba(159,178,217,.95)";
 
-    function deriveLabel(el, idx){
-      const t = (el.textContent || "").replace(/\s+/g," ").trim();
-      if(t) return (idx+1) + ". " + (t.length > 26 ? t.slice(0,26) + "…" : t);
-      return (idx+1) + ". (section)";
+      const win = getRefWin();
+      // bind scroll
+      try{
+        win.addEventListener("scroll", onLeftScroll, {passive:true});
+        const scrollEl = getScrollEl();
+        if(scrollEl) scrollEl.addEventListener("scroll", onLeftScroll, {passive:true});
+      }catch(e){}
+
+      // update rail mapping (new scrollHeight)
+      renderRailMarkers();
+    }else{
+      els.refStatus.textContent = "BLOCKED: δεν έχω πρόσβαση στο iframe (server/Pages απαιτείται).";
+      els.refStatus.style.color = "rgba(255,95,110,.95)";
+      renderRailMarkers();
     }
+  });
 
-    function updateSectionTops(){
-      const win = frame.contentWindow;
-      if(!win) return;
-      sections.forEach(s => {
-        // offsetTop relative to document
-        // Using getBoundingClientRect + scrollY inside iframe
-        const r = s.el.getBoundingClientRect();
-        s.top = r.top + win.scrollY;
-      });
-    }
+  // Init
+  load();
+  updateStatuses();
 
-    function rebuildMarkers(){
-      markersEl.innerHTML = "";
-      sections.forEach((s, i) => {
-        const btn = document.createElement("div");
-        btn.className = "markerBtn";
-        btn.textContent = i+1;
-        btn.title = s.label;
-        btn.dataset.id = s.id;
-        if(hasNote(s.id)) btn.classList.add("hasNote");
-        btn.addEventListener("click", () => {
-          scrollToSection(s.id);
-          setActive(s.id);
-        });
-        markersEl.appendChild(btn);
-      });
-    }
-
-    function positionMarkers(){
-      const win = frame.contentWindow;
-      const doc = frame.contentDocument;
-      if(!win || !doc) return;
-
-      const scrollY = win.scrollY;
-      const maxY = markersEl.clientHeight - 24;
-
-      sections.forEach((s) => {
-        const btn = markersEl.querySelector(`.markerBtn[data-id="${CSS.escape(s.id)}"]`);
-        if(!btn) return;
-
-        // y θέση = θέση της ενότητας μέσα στο iframe viewport + offset του markers panel
-        const y = Math.max(6, Math.min(maxY, (s.top - scrollY) + 8));
-        btn.style.top = y + "px";
-      });
-    }
-
-    function setActiveByScroll(){
-      const win = frame.contentWindow;
-      if(!win || sections.length === 0) return;
-
-      const y = win.scrollY + 12;
-      let best = sections[0];
-      for(const s of sections){
-        if(s.top <= y) best = s;
-        else break;
-      }
-      if(best && best.id !== activeId) setActive(best.id);
-    }
-
-    function setActive(id, silentLoad=false){
-      if(!id) return;
-      // save previous
-      if(activeId && !silentLoad) saveActiveNote();
-
-      activeId = id;
-
-      // UI highlight
-      markersEl.querySelectorAll(".markerBtn").forEach(b => b.classList.toggle("active", b.dataset.id === id));
-      const s = sections.find(x => x.id === id);
-      activeLabelEl.textContent = "Marker: " + (s ? s.label : id);
-
-      // load note for this section
-      loadNote(id);
-
-      // mark note state
-      updateMarkerHasNote(id);
-    }
-
-    function updateMarkerHasNote(id){
-      if(!id) return;
-      const btn = markersEl.querySelector(`.markerBtn[data-id="${CSS.escape(id)}"]`);
-      if(!btn) return;
-      btn.classList.toggle("hasNote", hasNote(id));
-    }
-
-    function scrollToSection(id){
-      const doc = frame.contentDocument;
-      const win = frame.contentWindow;
-      if(!doc || !win) return;
-      const el = doc.getElementById(id);
-      if(!el) return;
-
-      // smooth scroll within iframe
-      const top = el.getBoundingClientRect().top + win.scrollY - 10;
-      win.scrollTo({ top, behavior: "smooth" });
-    }
-  </script>
+})();
+</script>
 </body>
 </html>
